@@ -1,0 +1,8 @@
+services:
+  ollama-llm:
+    image: ollama/ollama:latest
+    container_name: ollama-llm
+    volumes:
+      - ./ollama:/data
+    ports:
+      - "11434:11434"
