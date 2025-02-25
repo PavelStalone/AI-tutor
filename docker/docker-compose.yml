@@ -1,3 +1,19 @@
+#services:
+#  ollama-llm:
+#    image: ollama/ollama:latest
+#    container_name: ollama-llm
+#    volumes:
+#      - ./ollama:/data
+#    ports:
+#      - "11435:11434"
+#    entrypoint: >
+#      sh -c "
+#        echo 'Start pulling model...' &&
+#        ollama pull hf.co/t-tech/T-lite-it-1.0-Q8_0-GGUF:Q8_0 &&
+#        echo 'pulling complete, start serve' &&
+#        ollama serve
+#      "
+
 services:
   ollama-llm:
     image: ollama/ollama:latest
@@ -6,3 +22,27 @@ services:
       - ./ollama:/data
     ports:
       - "11434:11434"
+    networks:
+      - ollama-network
+
+  prepare-models:
+    image: ollama/ollama:latest
+    depends_on:
+      - ollama-llm
+    volumes:
+      - ./ollama:/data
+    environment:
+      - OLLAMA_HOST=http://ollama-llm:11434
+    networks:
+      - ollama-network
+    entrypoint: >
+      sh -c "
+        echo 'Start pulling model...' &&
+        ollama pull herenickname/t-tech_T-lite-it-1.0:q4_k_m &&
+        echo 'pulling complete, run model' &&
+        ollama run herenickname/t-tech_T-lite-it-1.0:q4_k_m
+      "
+
+networks:
+  ollama-network:
+    driver: bridge
