@@ -25,7 +25,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
-	implementation("org.springframework.ai:spring-ai-mongodb-atlas-store-spring-boot-starter")
+//	implementation("org.springframework.ai:spring-ai-mongodb-atlas-store-spring-boot-starter")
 	implementation("org.springframework.ai:spring-ai-ollama-spring-boot-starter")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")

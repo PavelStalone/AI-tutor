@@ -1,0 +1,12 @@
+services:
+  mongo-db:
+    image: mongo:latest
+    container_name: mongo-db
+    ports:
+      - "27018:27018"
+    environment:
+      MONGO_INITDB_ROOT_PASSWORD: 'root'
+
+networks:
+  ollama-network:
+    driver: bridge

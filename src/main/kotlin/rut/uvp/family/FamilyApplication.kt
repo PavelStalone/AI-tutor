@@ -1,16 +1,15 @@
 package rut.uvp.family
 
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.ai.chat.prompt.Prompt
-import org.springframework.ai.ollama.OllamaChatModel
 import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Description
-import java.util.function.Function
 
-@SpringBootApplication
+
+@SpringBootApplication(
+//    exclude = [MongoAutoConfiguration::class, MongoDataAutoConfiguration::class]
+)
 class FamilyApplication {
 
     @Bean
@@ -18,12 +17,14 @@ class FamilyApplication {
         println("Start question")
 
         chatClient
-            .prompt("Какая температура в Москве?")
+            .prompt("Я знаю Java и немного Git, где и кем я могу работать?")
             .tools(WeatherTools())
             .call()
             .content().also {
                 println(it)
             }
+
+        println("Finish")
     }
 }
 
