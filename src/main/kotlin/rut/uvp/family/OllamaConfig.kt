@@ -41,22 +41,20 @@ class OllamaConfig {
     fun chatClient(
         chatModel: ChatModel,
         vectorStore: VectorStore,
-        chatClientBuilder: ChatClient.Builder,
     ): ChatClient {
-        return chatClientBuilder
+        return ChatClient.builder(chatModel)
             .defaultAdvisors(
                 QuestionAnswerAdvisor(vectorStore, SearchRequest.builder().build())
             )
             .build()
-//        return ChatClient.create(chatModel)
     }
 }
 
-class WeatherTools {
+class TestTools {
 
-    @Tool(description = "Получить температуру по местположению")
-    fun currentWeather(location: String): String {
-        println("currentWeather called: $location")
-        return "25"
+    @Tool(description = "Записаться на собеседование по названию компании")
+    fun testFun(companyName: String): String {
+        println("testFun called: $companyName")
+        return "Собеседование назначено на 28.02.2025"
     }
 }
