@@ -1,15 +1,14 @@
 package rut.uvp.family
 
-import org.springframework.ai.embedding.EmbeddingModel
 import org.springframework.ai.reader.TextReader
 import org.springframework.ai.transformer.splitter.TokenTextSplitter
-import org.springframework.ai.vectorstore.SimpleVectorStore
 import org.springframework.ai.vectorstore.VectorStore
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.CommandLineRunner
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.annotation.Order
 import org.springframework.core.io.Resource
-import java.io.File
 
 @Configuration
 class RagConfig {
@@ -18,38 +17,35 @@ class RagConfig {
     private lateinit var testRag: Resource
 
     @Bean
-    fun provideVectorStore(embeddingModel: EmbeddingModel): VectorStore {
-        val vectorStore = SimpleVectorStore.builder(embeddingModel).build()
+    @Order(1)
+    fun runnerRag(vectorStore: VectorStore) = CommandLineRunner { _ ->
+        val textReader = TextReader(testRag)
+        textReader.customMetadata["filename"] = "TestRag.txt"
 
-        val vectorStoreFile = File("./vector_store.json")
+        val documents = textReader.get()
 
-        if (vectorStoreFile.exists()) {
-            println("VectorStore loaded")
+        val textSplitter = TokenTextSplitter(
+            500,
+            200,
+            10,
+            5000,
+            false
+        )
 
-            vectorStore.load(vectorStoreFile)
-        } else {
-            println("Create vectorFile")
+        val splitDocuments = textSplitter.apply(documents)
 
-            val textReader = TextReader(testRag)
-            textReader.customMetadata["filename"] = "TestRag.txt"
+        splitDocuments.filter { document ->
+            println("Document. id: ${document.id}, text: ${document.text}")
+            document.text ?: false
 
-            val documents = textReader.get()
+            val similar = vectorStore.similaritySearch(document.text!!)
+            println("similar: $similar")
 
-            val textSplitter = TokenTextSplitter(
-                500,
-                200,
-                10,
-                5000,
-                false
-            )
+            (similar?.any { sim -> sim.text == document.text } != true)
+        }.also {
+            println("Document was added: $it")
+        }.run(vectorStore::add)
 
-            val splitDocuments = textSplitter.apply(documents)
-
-            vectorStore.add(splitDocuments)
-            vectorStore.save(vectorStoreFile)
-        }
-
-        println("VectorStore initialized success")
-        return vectorStore
+        println("Finished")
     }
 }

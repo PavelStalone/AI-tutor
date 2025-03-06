@@ -5,14 +5,16 @@ import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Bean
+import org.springframework.core.annotation.Order
 
 
 @SpringBootApplication
 class FamilyApplication {
 
     @Bean
+    @Order(2)
     fun runner(chatClient: ChatClient) = CommandLineRunner { _ ->
-        val testQuestion = "Я знаю Java и немного Git. Запиши меня на собеседование, там где я смогу устроиться."
+        val testQuestion = "Куда можно устроиться зная Java и немного Git?"
         println("Send question: $testQuestion")
 
         chatClient
