@@ -13,16 +13,19 @@ class FamilyApplication {
 
     @Bean
     @Order(2)
-    fun runner(chatClient: ChatClient) = CommandLineRunner { _ ->
-        val testQuestion = "Куда можно устроиться зная Java и немного Git?"
+    fun runner(chatClient: ChatClient, testTools: WorkTools) = CommandLineRunner { _ ->
+        val testQuestion =
+            "Составь список вакансий, которые мне подходят. Я знаю Java, Python на среднем уровне, Git, изучал HTML и CSS"
         println("Send question: $testQuestion")
 
         chatClient
             .prompt(testQuestion)
-            .tools(TestTools())
-            .call()
-            .content().also {
-                println(it)
+            .tools(
+                testTools
+            )
+            .stream()
+            .content().subscribe {
+                print(it)
             }
 
         println("Finish")

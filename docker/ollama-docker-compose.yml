@@ -2,6 +2,13 @@ services:
   ollama-llm:
     image: ollama/ollama:latest
     container_name: ollama-llm
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [ "gpu" ]
+              count: all
     volumes:
       - ./ollama:/data
     ports:
