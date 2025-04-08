@@ -34,10 +34,48 @@ class RagConfig {
                 it.id
             }
             ?.run {
-                vectorStore.delete(this)
+                if (isNotEmpty()) {
+                    vectorStore.delete(this)
+                }
             }
         println("Finished")
     }
+
+//    @Bean
+//    fun provideVectorStore(embeddingModel: EmbeddingModel): VectorStore {
+//        val vectorStore = SimpleVectorStore.builder(embeddingModel).build()
+//
+//        val vectorStoreFile = File("./vector_store.json")
+//
+//        if (vectorStoreFile.exists()) {
+//            println("VectorStore loaded")
+//
+//            vectorStore.load(vectorStoreFile)
+//        } else {
+//            println("Create vectorFile")
+//
+//            val textReader = TextReader(testRag)
+//            textReader.customMetadata["filename"] = "TestRag.txt"
+//
+//            val documents = textReader.get()
+//
+//            val textSplitter = TokenTextSplitter(
+//                500,
+//                200,
+//                10,
+//                5000,
+//                false
+//            )
+//
+//            val splitDocuments = textSplitter.apply(documents)
+//
+//            vectorStore.add(splitDocuments)
+//            vectorStore.save(vectorStoreFile)
+//        }
+//
+//        println("VectorStore initialized success")
+//        return vectorStore
+//    }
 
 //    @Bean
 //    @Order(1)
@@ -74,8 +112,9 @@ class RagConfig {
 }
 
 class LoggerAdvisor() : CallAroundAdvisor, StreamAroundAdvisor {
+
     override fun getOrder(): Int {
-        return 0;
+        return 0
     }
 
     override fun getName(): String {
@@ -87,7 +126,7 @@ class LoggerAdvisor() : CallAroundAdvisor, StreamAroundAdvisor {
 
         val advisedResponse = chain.nextAroundStream(advisedRequest)
 
-        return MessageAggregator().aggregateAdvisedResponse(advisedResponse, { println("AFTER: $it") })
+        return MessageAggregator().aggregateAdvisedResponse(advisedResponse) { println("AFTER: $it") }
     }
 
     override fun aroundCall(advisedRequest: AdvisedRequest, chain: CallAroundAdvisorChain): AdvisedResponse {
@@ -99,5 +138,4 @@ class LoggerAdvisor() : CallAroundAdvisor, StreamAroundAdvisor {
 
         return advisedResponse
     }
-
 }

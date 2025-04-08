@@ -11,8 +11,8 @@ import org.springframework.stereotype.Component
 
 @Component
 class WorkTools(
-    @Qualifier("GenerationClient") private val chatClient: ChatClient,
     private val vectorStore: VectorStore,
+    @Qualifier("GenerationClient") private val chatClient: ChatClient,
 ) {
 
     @Tool(description = "Записать на собеседование по названию компании")
@@ -22,13 +22,13 @@ class WorkTools(
         return "Запись прошла успешно"
     }
 
-    @Tool(description = "Получиение новых вакансий")
+    @Tool(description = "Получение новых вакансий")
     fun fetchCompany(@ToolParam(description = "Стек пользователя") stack: String): String? {
         println("fetchCompany called: $stack")
 
         val result =
             chatClient
-                .prompt("Сгенерируй список из 3 вакансий, в котором должно быть название компании, должность и стек технологий для этой вакансии. Можешь добавить из $stack стека, некоторые пункты (Добавляй на рандом, можешь вообще не добовлять из этого списка). Ответь на Русском языке. Напиши только список")
+                .prompt("Сгенерируй список из 3 вакансий, в котором должно быть название компании, должность и стек технологий для этой вакансии. Можешь добавить из $stack стека, некоторые пункты (Добавляй на рандом, можешь вообще не добавлять из этого списка). Ответь на Русском языке. Напиши только список")
                 .call()
                 .content()
 

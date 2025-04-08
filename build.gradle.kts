@@ -21,16 +21,17 @@ repositories {
 extra["springAiVersion"] = "1.0.0-M6"
 
 dependencies {
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-    implementation("org.springframework.boot:spring-boot-starter-security")
-    implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("org.springframework.ai:spring-ai-chroma-store-spring-boot-starter")
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+//    implementation("org.springframework.boot:spring-boot-starter-security")
+//    testImplementation("org.springframework.security:spring-security-test")
     implementation("org.springframework.ai:spring-ai-ollama-spring-boot-starter")
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testImplementation("org.springframework.security:spring-security-test")
+    implementation("org.springframework.ai:spring-ai-chroma-store-spring-boot-starter")
+
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
 
 dependencyManagement {
