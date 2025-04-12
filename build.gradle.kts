@@ -28,7 +28,20 @@ dependencies {
 //    testImplementation("org.springframework.security:spring-security-test")
     implementation("org.springframework.ai:spring-ai-ollama-spring-boot-starter")
     implementation("org.springframework.ai:spring-ai-chroma-store-spring-boot-starter")
-
+    
+    // For HTML parsing (for the activity parser)
+    implementation("org.jsoup:jsoup:1.17.2")
+    
+    // Reactive support
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
+    implementation("io.projectreactor:reactor-core")
+    
+    // Caching
+    implementation("org.springframework.boot:spring-boot-starter-cache")
+    
+    // Logging
+    implementation("org.springframework.boot:spring-boot-starter-logging")
+    
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("org.springframework.boot:spring-boot-starter-test")

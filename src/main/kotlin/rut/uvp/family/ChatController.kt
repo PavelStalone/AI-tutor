@@ -17,6 +17,7 @@ import reactor.core.publisher.Flux
 @RequestMapping("chat")
 class ChatController(
     private val testTools: WorkTools,
+    private val familyActivityTools: FamilyActivityTools,
     private val chatClient: ChatClient,
     private val embeddingModel: EmbeddingModel,
 ) {
@@ -47,7 +48,7 @@ class ChatController(
 //                    advisors(QuestionAnswerAdvisor(vectorStore, SearchRequest.builder().topK(10).build()))
 //                }
 //            }
-            .tools(testTools)
+            .tools(testTools, familyActivityTools)
             .stream()
             .content()
     }

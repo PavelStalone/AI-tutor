@@ -11,10 +11,16 @@ import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Bean
 import org.springframework.core.annotation.Order
-
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.KotlinModule
 
 @SpringBootApplication
 class FamilyApplication {
+
+    @Bean
+    fun objectMapper(): ObjectMapper {
+        return ObjectMapper().registerModule(KotlinModule.Builder().build())
+    }
 
 //    @Bean
 //    @Order(2)

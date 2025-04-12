@@ -1,0 +1,86 @@
+### Запрос рекомендаций для семейного досуга
+POST http://localhost:8080/family-activity
+Content-Type: application/json
+
+{
+  "message": "Что поделать с дочкой 6 лет в эти выходные? Нам нравится активный отдых и творчество."
+}
+
+### Запрос с автоматическим подбором времени
+POST http://localhost:8080/family-activity
+Content-Type: application/json
+
+{
+  "message": "Подскажи, какие мероприятия можно посетить с сыном 10 лет? Он увлекается наукой и техникой. Ты можешь сам подобрать удобное время."
+}
+
+### Запрос с конкретной датой
+POST http://localhost:8080/family-activity
+Content-Type: application/json
+
+{
+  "message": "Планирую в следующую субботу куда-то сходить с женой. Нам нравится искусство и музыка. Подскажи варианты."
+}
+
+### Запрос с указанием города
+POST http://localhost:8080/family-activity
+Content-Type: application/json
+
+{
+  "message": "Какие интересные выставки сейчас проходят в Санкт-Петербурге?"
+}
+
+### Запрос в виде потока событий
+POST http://localhost:8080/family-activity/stream
+Content-Type: application/json
+
+{
+  "message": "Что поделать с дочкой 6 лет в эти выходные? Нам нравятся творческие занятия."
+}
+
+### Получение списка доступных городов через KudaGo API
+GET http://localhost:8080/api/kudago/locations
+
+### Получение категорий мероприятий через KudaGo API
+GET http://localhost:8080/api/kudago/categories
+
+### Поиск мероприятий для детей в Москве через KudaGo API
+GET http://localhost:8080/api/kudago/events?location=msk&categories=kids,masterclass&ageRestriction=0%2B
+
+### Поиск выставок в Санкт-Петербурге через KudaGo API
+GET http://localhost:8080/api/kudago/events?location=spb&categories=exhibition&daysAhead=14
+
+### Запрос к чату для получения городов
+POST http://localhost:8080/chat
+Content-Type: application/json
+
+{
+  "message": "Расскажи, для каких городов у тебя есть информация о мероприятиях?"
+}
+
+### Запрос к чату для получения категорий
+POST http://localhost:8080/chat
+Content-Type: application/json
+
+{
+  "message": "Какие категории мероприятий ты поддерживаешь?"
+}
+
+### МОКОВЫЕ ДАННЫЕ СЕМЬИ И КАЛЕНДАРЯ ###
+
+### Получение всех членов семьи
+GET http://localhost:8080/api/family/members
+
+### Получение владельца аккаунта
+GET http://localhost:8080/api/family/members/owner
+
+### Получение всех событий календаря
+GET http://localhost:8080/api/family/calendar
+
+### Получение событий календаря по ID члена семьи (замените ID)
+GET http://localhost:8080/api/family/calendar/member/{{member_id}}
+
+### Получение событий календаря в диапазоне дат (текущая неделя)
+GET http://localhost:8080/api/family/calendar/range?startDate={{current_date}}&endDate={{end_date}}
+
+### Примечание: Замените {{member_id}}, {{current_date}} и {{end_date}} на реальные значения перед запуском 

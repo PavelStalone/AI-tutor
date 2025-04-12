@@ -1,0 +1,122 @@
+[
+  {
+    "title": "Мастер-класс по рисованию для детей",
+    "description": "Увлекательный мастер-класс по рисованию для детей от 5 до 10 лет. Профессиональные художники научат вашего ребенка основам живописи.",
+    "imageUrl": "https://example.com/images/drawing-class.jpg",
+    "date": "2023-10-01",
+    "time": "12:00-14:00",
+    "location": "Детский центр 'Радуга', ул. Пушкина, 10",
+    "price": "1000 руб",
+    "ageRestriction": "5-10 лет",
+    "category": "Мастер-класс",
+    "url": "https://example.com/events/drawing-class"
+  },
+  {
+    "title": "Интерактивный научный музей 'Экспериментариум'",
+    "description": "Музей, где дети могут в игровой форме познакомиться с законами физики, химии и биологии через интерактивные экспонаты.",
+    "imageUrl": "https://example.com/images/experimentarium.jpg",
+    "date": "2023-10-01",
+    "time": "10:00-19:00",
+    "location": "ТЦ 'Гранд', 3 этаж",
+    "price": "700 руб",
+    "ageRestriction": "0+",
+    "category": "Музей",
+    "url": "https://example.com/events/experimentarium"
+  },
+  {
+    "title": "Спектакль 'Приключения Чиполлино'",
+    "description": "Детский музыкальный спектакль по мотивам сказки Джанни Родари.",
+    "imageUrl": "https://example.com/images/cipollino.jpg",
+    "date": "2023-10-01",
+    "time": "15:00-16:30",
+    "location": "Детский театр кукол",
+    "price": "800 руб",
+    "ageRestriction": "3+",
+    "category": "Театр",
+    "url": "https://example.com/events/cipollino"
+  },
+  {
+    "title": "Выставка современного искусства",
+    "description": "Экспозиция работ современных художников из России и Европы.",
+    "imageUrl": "https://example.com/images/art-exhibition.jpg",
+    "date": "2023-10-01",
+    "time": "11:00-20:00",
+    "location": "Центр современного искусства",
+    "price": "500 руб",
+    "ageRestriction": "12+",
+    "category": "Выставка",
+    "url": "https://example.com/events/art-exhibition"
+  },
+  {
+    "title": "Концерт классической музыки",
+    "description": "Произведения Моцарта и Бетховена в исполнении симфонического оркестра.",
+    "imageUrl": "https://example.com/images/classic-music.jpg",
+    "date": "2023-10-01",
+    "time": "19:00-21:00",
+    "location": "Филармония",
+    "price": "1500 руб",
+    "ageRestriction": "6+",
+    "category": "Концерт",
+    "url": "https://example.com/events/classic-music"
+  },
+  {
+    "title": "Детский кулинарный мастер-класс",
+    "description": "Научим детей готовить простые и вкусные блюда. Ребенок сможет сам приготовить пиццу, печенье и другие вкусности.",
+    "imageUrl": "https://example.com/images/cooking-class.jpg",
+    "date": "2023-10-02",
+    "time": "11:00-13:00",
+    "location": "Кулинарная студия 'Вкусняшка'",
+    "price": "1200 руб",
+    "ageRestriction": "6-12 лет",
+    "category": "Мастер-класс",
+    "url": "https://example.com/events/cooking-class"
+  },
+  {
+    "title": "Квест 'Поиски сокровищ'",
+    "description": "Увлекательный квест для всей семьи с поиском подсказок и решением загадок.",
+    "imageUrl": "https://example.com/images/quest.jpg",
+    "date": "2023-10-02",
+    "time": "14:00-16:00",
+    "location": "Парк 'Сокольники'",
+    "price": "1500 руб за команду",
+    "ageRestriction": "6+",
+    "category": "Квест",
+    "url": "https://example.com/events/treasure-quest"
+  },
+  {
+    "title": "Детский кинофестиваль",
+    "description": "Показ мультфильмов и детских фильмов, творческие встречи с актерами и режиссерами.",
+    "imageUrl": "https://example.com/images/kids-cinema.jpg",
+    "date": "2023-10-02",
+    "time": "10:00-18:00",
+    "location": "Кинотеатр 'Заря'",
+    "price": "300 руб",
+    "ageRestriction": "0+",
+    "category": "Кино",
+    "url": "https://example.com/events/kids-cinema"
+  },
+  {
+    "title": "Зоопарк 'Дикая природа'",
+    "description": "Посещение зоопарка с экзотическими животными. Возможность покормить некоторых животных.",
+    "imageUrl": "https://example.com/images/zoo.jpg",
+    "date": "Ежедневно",
+    "time": "09:00-20:00",
+    "location": "ул. Лесная, 15",
+    "price": "500 руб взрослый, 300 руб детский",
+    "ageRestriction": "0+",
+    "category": "Зоопарк",
+    "url": "https://example.com/events/zoo"
+  },
+  {
+    "title": "Водная прогулка на речном трамвайчике",
+    "description": "Экскурсия по реке с гидом, который расскажет об истории города и достопримечательностях.",
+    "imageUrl": "https://example.com/images/river-cruise.jpg",
+    "date": "2023-10-01",
+    "time": "12:00, 14:00, 16:00, 18:00",
+    "location": "Причал 'Центральный'",
+    "price": "600 руб взрослый, 400 руб детский",
+    "ageRestriction": "0+",
+    "category": "Экскурсия",
+    "url": "https://example.com/events/river-cruise"
+  }
+] 
