@@ -1,36 +1,23 @@
 package rut.uvp.family.services
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.ai.chat.messages.AssistantMessage
-import org.springframework.ai.chat.messages.Message
-import org.springframework.ai.chat.messages.SystemMessage
-import org.springframework.ai.chat.messages.UserMessage
-import org.springframework.ai.chat.prompt.Prompt
-import org.springframework.ai.chat.prompt.SystemPromptTemplate
-import org.springframework.ai.vectorstore.SearchRequest
-import org.springframework.ai.vectorstore.VectorStore
 import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Service
 import rut.uvp.family.models.ActivityRequestData
-import rut.uvp.family.models.FamilyMember
-import rut.uvp.family.models.FamilyMemberData
-import java.time.LocalDate
-import java.time.Period
-import java.time.format.DateTimeFormatter
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import reactor.core.publisher.Mono
 
-/**
- * Расширенная версия сервиса ConversationFlowService, которая использует RAG для улучшения анализа запросов
- */
 @Service
-@Primary // Этот сервис будет использоваться вместо стандартного ConversationFlowService
+@Primary
 class EnhancedConversationFlowService(
     private val chatClient: ChatClient,
-    private val objectMapper: ObjectMapper,
-    private val vectorStore: VectorStore,
-    private val familyService: FamilyService
+    private val objectMapper: ObjectMapper
 ) {
+    private val logger = LoggerFactory.getLogger(EnhancedConversationFlowService::class.java)
+
     companion object {
         private const val EXTRACT_SYSTEM_PROMPT = """
             Ты - помощник для анализа запросов о семейных мероприятиях и досуге.
@@ -53,12 +40,11 @@ class EnhancedConversationFlowService(
             - needsTimeSlotSelection: Boolean - нужно ли предложить пользователю выбор временного слота
             - budgetConstraint: String? - ограничения по бюджету ("бесплатно", "недорого", "без ограничений")
             - locationPreference: String? - предпочтения по месту проведения (район, город)
-            - activityDuration: String? - продолжительность активности ("короткая", "полдня", "весь день")
             - specialRequirements: List<String> - особые требования или интересы
             
             Если ты не смог извлечь из запроса пользователя данные для поиска активности, верни null.
         """
-        
+
         private const val FOLLOW_UP_SYSTEM_PROMPT = """
             Ты - помощник для поиска семейных мероприятий и досуга. 
             
@@ -84,128 +70,84 @@ class EnhancedConversationFlowService(
 
     /**
      * Извлекает структурированные данные о запросе активности из сообщения пользователя
-     *
-     * @param userMessage сообщение пользователя
-     * @return структурированные данные о запросе активности или null, если данные извлечь не удалось
      */
-    fun extractActivityRequest(userMessage: String): ActivityRequestData? {
-        val messages = listOf(
-            SystemMessage(EXTRACT_SYSTEM_PROMPT),
-            UserMessage(userMessage)
-        )
-        
-        val prompt = Prompt(messages)
-        val response = chatClient.call(prompt)
-        
-        return try {
-            val jsonResponse = response.result.output.content
-            objectMapper.readValue<ActivityRequestData?>(jsonResponse)
+    suspend fun extractActivityRequest(userMessage: String): ActivityRequestData? = withContext(Dispatchers.IO) {
+        logger.debug("Extracting activity request from message: $userMessage")
+
+        try {
+            val promptBuilder = chatClient.prompt()
+                .system(EXTRACT_SYSTEM_PROMPT)
+                .user(userMessage)
+
+            val response = callAndExtractResponse(promptBuilder)
+
+            logger.debug("AI response for activity extraction: $response")
+
+            try {
+                objectMapper.readValue(response, ActivityRequestData::class.java)
+            } catch (e: Exception) {
+                logger.error("JSON parsing error: ${e.message}, response: $response")
+                null
+            }
         } catch (e: Exception) {
-            println("Error parsing activity request: ${e.message}")
+            logger.error("Error parsing activity request: ${e.message}")
             null
         }
     }
-    
-    /**
-     * Проверяет, нужна ли дополнительная информация для поиска активности
-     *
-     * @param activityRequest данные о запросе активности
-     * @return пара (нужна ли информация, список недостающих полей)
-     */
+
+    private suspend fun callAndExtractResponse(promptTemplate: ChatClient.ChatClientRequestSpec): String = withContext(Dispatchers.IO) {
+        try {
+            val result = Mono.fromCallable { promptTemplate.call() }.block()
+            result?.content() ?: ""
+        } catch (e: Exception) {
+            logger.error("Error in ChatClient: ${e.message}")
+            throw e
+        }
+    }
+
     fun needsMoreInformation(activityRequest: ActivityRequestData?): Pair<Boolean, List<String>> {
         if (activityRequest == null) {
             return Pair(true, listOf("activityType", "familyMember"))
         }
-        
+
         val missingFields = mutableListOf<String>()
-        
+
         if (activityRequest.activityType == null) {
             missingFields.add("activityType")
         }
-        
-        if (activityRequest.familyMember == null || activityRequest.familyMember.role == null) {
+
+        if (activityRequest.familyMember?.role == null) {
             missingFields.add("familyMember")
         } else if (activityRequest.familyMember.age == null) {
             missingFields.add("familyMemberAge")
         }
-        
+
         if (activityRequest.preferredDate == null) {
             missingFields.add("preferredDate")
         }
-        
+
         return Pair(missingFields.isNotEmpty(), missingFields)
     }
-    
-    /**
-     * Генерирует уточняющий вопрос для получения недостающей информации
-     *
-     * @param missingFields список недостающих полей
-     * @param familyMemberRole роль члена семьи (если известна)
-     * @return уточняющий вопрос
-     */
-    fun generateFollowUpQuestion(missingFields: List<String>, familyMemberRole: String?): String {
-        val model = mapOf(
-            "missingFields" to missingFields.joinToString("\n"),
-            "familyMemberRole" to (familyMemberRole ?: "неизвестно")
-        )
-        
-        val systemPrompt = SystemPromptTemplate(FOLLOW_UP_SYSTEM_PROMPT).create(model)
-        val prompt = Prompt(listOf(systemPrompt, UserMessage("Сформируй уточняющий вопрос")))
-        
-        return chatClient.call(prompt).result.output.content
-    }
-    
-    /**
-     * Обогащает запрос информацией из векторного хранилища
-     *
-     * @param activityRequest данные о запросе активности
-     * @return обогащенные данные о запросе активности
-     */
-    fun enrichRequestWithContextualData(activityRequest: ActivityRequestData): ActivityRequestData {
-        val enriched = activityRequest.copy()
-        
-        // Если есть информация о члене семьи, ищем дополнительный контекст
-        activityRequest.familyMember?.role?.let { role ->
-            val familyContext = retrieveFamilyContext(role)
-            if (familyContext.isNotEmpty()) {
-                // Если возраст не указан, но есть в контексте - добавляем
-                if (enriched.familyMember?.age == null) {
-                    val ageRegex = "\\b(?:возраст|лет|года|год)\\s*[:=]\\s*(\\d+)\\b".toRegex()
-                    val match = ageRegex.find(familyContext)
-                    match?.groupValues?.get(1)?.toIntOrNull()?.let { age ->
-                        enriched.familyMember = enriched.familyMember?.copy(age = age)
-                    }
-                }
-                
-                // Если есть особые интересы в контексте - добавляем
-                val interestsRegex = "\\b(?:интересы|увлечения|хобби)\\s*[:=]\\s*([^.]+)".toRegex()
-                val interestsMatch = interestsRegex.find(familyContext)
-                interestsMatch?.groupValues?.get(1)?.split(",")?.map { it.trim() }?.let { interests ->
-                    if (interests.isNotEmpty()) {
-                        enriched.specialRequirements = (enriched.specialRequirements ?: emptyList()) + interests
-                    }
-                }
-            }
+
+    suspend fun generateFollowUpQuestion(missingFields: List<String>, familyMemberRole: String?): String = withContext(Dispatchers.IO) {
+        logger.debug("Generating follow-up question for missing fields: {}, role: {}", missingFields, familyMemberRole)
+
+        val systemPromptText = FOLLOW_UP_SYSTEM_PROMPT
+            .replace("{{missingFields}}", missingFields.joinToString("\n"))
+            .replace("{{familyMemberRole}}", familyMemberRole ?: "неизвестно")
+
+        try {
+            val promptBuilder = chatClient.prompt()
+                .system(systemPromptText)
+                .user("Сформируй уточняющий вопрос")
+
+            val response = callAndExtractResponse(promptBuilder)
+            
+            logger.debug("AI response for follow-up question: $response")
+            response
+        } catch (e: Exception) {
+            logger.error("Error generating follow-up question: ${e.message}")
+            "Подскажите, пожалуйста, больше информации о планируемом досуге."
         }
-        
-        return enriched
     }
-    
-    /**
-     * Получает контекст о члене семьи из векторного хранилища
-     *
-     * @param role роль члена семьи
-     * @return контекст о члене семьи
-     */
-    private fun retrieveFamilyContext(role: String): String {
-        val searchResults = vectorStore.similaritySearch(
-            SearchRequest.builder()
-                .query("информация о $role")
-                .filter("type:family_member")
-                .topK(1)
-                .build()
-        )
-        
-        return searchResults.firstOrNull()?.text ?: ""
-    }
-} 
+}

@@ -28,7 +28,7 @@ dependencies {
 //    testImplementation("org.springframework.security:spring-security-test")
     implementation("org.springframework.ai:spring-ai-ollama-spring-boot-starter")
     implementation("org.springframework.ai:spring-ai-chroma-store-spring-boot-starter")
-    
+
     // For HTML parsing (for the activity parser)
     implementation("org.jsoup:jsoup:1.17.2")
     
@@ -41,6 +41,10 @@ dependencies {
     
     // Logging
     implementation("org.springframework.boot:spring-boot-starter-logging")
+
+    // Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.7.3")
     
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")

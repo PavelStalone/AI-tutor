@@ -5,54 +5,82 @@ import org.springframework.ai.tool.annotation.ToolParam
 import org.springframework.stereotype.Component
 import rut.uvp.family.models.ActivityRequestData
 import rut.uvp.family.models.FamilyActivityResponse
-import rut.uvp.family.services.ConversationFlowService
-import rut.uvp.family.services.DateSelectionService
-import rut.uvp.family.services.ParserService
+import rut.uvp.family.services.EnhancedConversationFlowService
 import rut.uvp.family.services.SearchQueryService
+import rut.uvp.family.services.TimeSlotService
+import rut.uvp.family.services.ParserService
 import com.fasterxml.jackson.databind.ObjectMapper
+import java.time.LocalDate
+import org.slf4j.LoggerFactory
 
 @Component
 class FamilyActivityTools(
-    private val conversationFlowService: ConversationFlowService,
-    private val dateSelectionService: DateSelectionService,
+    private val conversationFlowService: EnhancedConversationFlowService,
+    private val timeSlotService: TimeSlotService,
     private val searchQueryService: SearchQueryService,
     private val parserService: ParserService,
     private val objectMapper: ObjectMapper
 ) {
+    private val logger = LoggerFactory.getLogger(FamilyActivityTools::class.java)
     
     @Tool(description = "Инструмент для поиска семейных мероприятий и досуга. Используй этот инструмент, чтобы найти рекомендации для семейного времяпрепровождения.")
-    fun findFamilyActivities(@ToolParam(description = "Запрос пользователя с описанием досуга, для кого ищем, предпочтения, ограничения") userQuery: String): String {
-        println("Finding family activities for query: $userQuery")
+    suspend fun findFamilyActivities(@ToolParam(description = "Запрос пользователя с описанием досуга, для кого ищем, предпочтения, ограничения") userQuery: String): String {
+        logger.info("Finding family activities for query: $userQuery")
         
-        // Step 1: Extract information from the user message
+        // Извлекаем данные о запросе активности из сообщения пользователя
         val activityRequest = conversationFlowService.extractActivityRequest(userQuery)
         
-        // Step 2: Check if more information is needed
+        if (activityRequest == null) {
+            logger.warn("Failed to extract activity request from user query")
+            return "К сожалению, я не смог определить ваш запрос. Пожалуйста, уточните, что вы ищете."
+        }
+        
+        try {
+            logger.info("Extracted activity request: ${objectMapper.writeValueAsString(activityRequest)}")
+        } catch (e: Exception) {
+            logger.warn("Failed to serialize activity request for logging")
+        }
+        
+        // Проверяем, нужна ли дополнительная информация
         val (needsMoreInfo, missingFields) = conversationFlowService.needsMoreInformation(activityRequest)
         if (needsMoreInfo) {
-            val followUpQuestion = conversationFlowService.generateFollowUpQuestion(missingFields)
+            logger.info("Need more information. Missing fields: $missingFields")
+            val familyMemberRole = activityRequest.familyMember?.role
+            val followUpQuestion = conversationFlowService.generateFollowUpQuestion(missingFields, familyMemberRole)
             return followUpQuestion
         }
         
-        // Step 3: Auto-select time slot if needed
-        val selectedTimeSlot = if (activityRequest.needsTimeSlotSelection) {
-            dateSelectionService.selectTimeSlot(activityRequest)
+        // Автоматически выбираем временной слот, если его нет
+        val selectedTimeSlot = if (activityRequest.needsTimeSlotSelection && activityRequest.preferredDate != null) {
+            timeSlotService.generateTimeSlotsForDate(LocalDate.parse(activityRequest.preferredDate)).firstOrNull()
         } else {
             null
         }
         
-        // Step 4: Generate search query
+        // Генерируем поисковый запрос на основе данных
         val searchQuery = searchQueryService.generateSearchQuery(activityRequest, selectedTimeSlot)
-            ?: return "К сожалению, я не смог сформировать поисковый запрос на основе предоставленной информации. Пожалуйста, уточните ваши предпочтения."
         
-        // Step 5: Search for activities
+        if (searchQuery == null) {
+            logger.warn("Failed to generate search query")
+            return "К сожалению, я не смог сформировать поисковый запрос на основе предоставленной информации. Пожалуйста, уточните ваши предпочтения."
+        }
+        
+        try {
+            logger.info("Generated search query: ${objectMapper.writeValueAsString(searchQuery)}")
+        } catch (e: Exception) {
+            logger.warn("Failed to serialize search query for logging")
+        }
+        
+        // Ищем мероприятия
+        logger.info("Searching activities with query: ${searchQuery.searchQuery}")
         val activities = parserService.searchActivities(searchQuery)
+        
+        logger.info("Found ${activities.size} activities")
         
         if (activities.isEmpty()) {
             return "К сожалению, я не смог найти подходящие мероприятия по вашему запросу. Попробуйте изменить параметры поиска или предпочтения."
         }
         
-        // Step 6: Format the results
         val response = FamilyActivityResponse(
             request = activityRequest,
             selectedTimeSlot = selectedTimeSlot,
@@ -61,17 +89,10 @@ class FamilyActivityTools(
         
         return formatActivityResponse(response)
     }
-    
-    /**
-     * Formats the activity response into a human-readable text
-     * 
-     * @param response The activity response object
-     * @return A formatted string with activity recommendations
-     */
+
     private fun formatActivityResponse(response: FamilyActivityResponse): String {
         val sb = StringBuilder()
         
-        // Add introduction
         val familyMember = response.request.familyMember
         if (familyMember != null) {
             sb.append("Вот что я нашел для ")
@@ -84,18 +105,15 @@ class FamilyActivityTools(
             sb.append("Вот что я нашел:\n\n")
         }
         
-        // Add selected time slot if available
         response.selectedTimeSlot?.let {
             sb.append("🗓️ Рекомендуемое время: ${it.selectedDate} в ${it.selectedTimeRange}\n\n")
         }
         
-        // Add activities
         response.activities.forEachIndexed { index, activity ->
             sb.append("${index + 1}. **${activity.title}**\n")
             
             activity.description?.let { sb.append("   ${it}\n") }
             
-            // Add details
             val details = mutableListOf<String>()
             
             activity.date?.let { details.add("Дата: $it") }
@@ -115,4 +133,4 @@ class FamilyActivityTools(
         
         return sb.toString()
     }
-} 
+}

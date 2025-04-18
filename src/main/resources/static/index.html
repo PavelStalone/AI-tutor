@@ -3,250 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Семейный досуг - Рекомендации</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Семейный досуг</title>
     <style>
         body {
-            background-color: #f8f9fa;
-            padding-top: 2rem;
-        }
-        .chat-container {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             max-width: 800px;
-            margin: 0 auto;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            padding: 20px;
-        }
-        .chat-header {
-            text-align: center;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #dee2e6;
-        }
-        .chat-messages {
-            min-height: 400px;
-            max-height: 600px;
-            overflow-y: auto;
-            margin-bottom: 20px;
-            padding: 10px;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
-        }
-        .user-message {
-            background-color: #e9f5ff;
-            border-radius: 15px;
-            padding: 10px 15px;
-            margin-bottom: 10px;
-            max-width: 80%;
-            margin-left: auto;
-            text-align: right;
-        }
-        .bot-message {
+            margin: 20px auto;
+            padding: 0 20px;
             background-color: #f5f5f5;
-            border-radius: 15px;
-            padding: 10px 15px;
-            margin-bottom: 10px;
-            max-width: 80%;
         }
-        .message-input {
+
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .input-group {
             display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
         }
-        .message-input input {
-            flex-grow: 1;
-            border-top-right-radius: 0;
-            border-bottom-right-radius: 0;
+
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
         }
-        .message-input button {
-            border-top-left-radius: 0;
-            border-bottom-left-radius: 0;
+
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.2s;
         }
-        .spinner-border {
-            display: none;
-            margin-right: 10px;
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        #response {
+            white-space: pre-wrap;
+            line-height: 1.5;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-height: 100px;
+            max-height: 500px;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+        }
+
+        .loading {
+            display: inline-block;
+            margin-left: 10px;
+        }
+
+        .loading:after {
+            content: '...';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60% { content: '...'; }
+            80% { content: ''; }
+        }
+
+        .error {
+            color: #dc3545;
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #dc3545;
+            border-radius: 4px;
+            background-color: #f8d7da;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="chat-container">
-            <div class="chat-header">
-                <h1>Семейный досуг</h1>
-                <p class="text-muted">Помощник для планирования семейного времяпрепровождения</p>
-            </div>
-            
-            <div class="chat-messages" id="chatMessages">
-                <div class="bot-message">
-                    Привет! Я помогу вам найти интересные мероприятия для семейного досуга. 
-                    Расскажите, для кого вы ищете занятие (например, "дочка 6 лет"), 
-                    когда планируете (дата или день недели) и какие у вас предпочтения.
-                </div>
-            </div>
-            
-            <div class="message-input">
-                <div class="spinner-border text-primary" role="status" id="loadingSpinner">
-                    <span class="visually-hidden">Загрузка...</span>
-                </div>
-                <input type="text" class="form-control" id="messageInput" placeholder="Ваше сообщение...">
-                <button class="btn btn-primary" id="sendButton">Отправить</button>
-            </div>
-            
-            <div class="mt-3">
-                <p class="text-muted">Примеры запросов:</p>
-                <div class="d-flex flex-wrap gap-2">
-                    <button class="btn btn-sm btn-outline-secondary example-query">Что поделать с дочкой 6 лет в эти выходные?</button>
-                    <button class="btn btn-sm btn-outline-secondary example-query">Куда сходить с сыном 10 лет, который увлекается наукой?</button>
-                    <button class="btn btn-sm btn-outline-secondary example-query">Подскажи варианты для семейного досуга с детьми 5 и 8 лет</button>
-                </div>
-            </div>
+        <h1>Поиск семейных мероприятий</h1>
+        <div class="input-group">
+            <input type="text" 
+                   id="query" 
+                   placeholder="Например: Какие мероприятия есть в Москве на этих выходных для детей?"
+                   value="Какие мероприятия есть в Москве на этих выходных для детей?">
+            <button id="submit">Найти</button>
         </div>
+        <div id="response"></div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const chatMessages = document.getElementById('chatMessages');
-            const messageInput = document.getElementById('messageInput');
-            const sendButton = document.getElementById('sendButton');
-            const loadingSpinner = document.getElementById('loadingSpinner');
-            const exampleButtons = document.querySelectorAll('.example-query');
-            
-            // Add click event listeners to example query buttons
-            exampleButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    messageInput.value = button.textContent;
-                    messageInput.focus();
-                });
-            });
-            
-            // Function to add a message to the chat
-            function addMessage(message, isUser) {
-                const messageElement = document.createElement('div');
-                messageElement.className = isUser ? 'user-message' : 'bot-message';
-                
-                // Convert markdown-like syntax to HTML
-                let formattedMessage = message;
-                // Bold text
-                formattedMessage = formattedMessage.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                // Italic text
-                formattedMessage = formattedMessage.replace(/_(.*?)_/g, '<em>$1</em>');
-                // Links
-                formattedMessage = formattedMessage.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-                // New lines
-                formattedMessage = formattedMessage.replace(/\n/g, '<br>');
-                
-                messageElement.innerHTML = formattedMessage;
-                chatMessages.appendChild(messageElement);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
-            
-            // Function to send a message
-            function sendMessage() {
-                const message = messageInput.value.trim();
-                if (message === '') return;
-                
-                // Add user message to chat
-                addMessage(message, true);
-                messageInput.value = '';
-                
-                // Show loading spinner
-                loadingSpinner.style.display = 'inline-block';
-                sendButton.disabled = true;
-                
-                // Send message to server
-                fetch('/family-activity', {
+        const queryInput = document.getElementById('query');
+        const submitButton = document.getElementById('submit');
+        const responseDiv = document.getElementById('response');
+
+        submitButton.addEventListener('click', async () => {
+            const query = queryInput.value.trim();
+            if (!query) return;
+
+            // Disable input and button while processing
+            queryInput.disabled = true;
+            submitButton.disabled = true;
+            responseDiv.textContent = 'Ищу мероприятия';
+            responseDiv.classList.add('loading');
+
+            try {
+                const response = await fetch('http://localhost:8080/chat', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ message })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    // Format the response for display
-                    let botResponse = formatActivityResponse(data);
-                    
-                    // Add bot response to chat
-                    addMessage(botResponse, false);
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    addMessage('Произошла ошибка при обработке запроса. Пожалуйста, попробуйте еще раз.', false);
-                })
-                .finally(() => {
-                    // Hide loading spinner
-                    loadingSpinner.style.display = 'none';
-                    sendButton.disabled = false;
-                    messageInput.focus();
+                    body: JSON.stringify({ message: query })
                 });
-            }
-            
-            // Format the JSON response into a readable message
-            function formatActivityResponse(response) {
-                let formattedResponse = '';
-                
-                // Add introduction
-                const familyMember = response.request.familyMember;
-                if (familyMember) {
-                    formattedResponse += `Вот что я нашел для ${familyMember.role || 'вашего ребенка'}`;
-                    if (familyMember.age) {
-                        formattedResponse += ` ${familyMember.age} лет`;
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                responseDiv.textContent = '';
+                responseDiv.classList.remove('loading');
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    // Split the chunk into SSE data lines
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data:')) {
+                            const text = line.slice(5); // Remove 'data:' prefix
+                            responseDiv.textContent += text;
+                        }
                     }
-                    formattedResponse += ':\n\n';
-                } else {
-                    formattedResponse += 'Вот что я нашел:\n\n';
                 }
-                
-                // Add selected time slot if available
-                if (response.selectedTimeSlot) {
-                    formattedResponse += `🗓️ Рекомендуемое время: ${response.selectedTimeSlot.selectedDate} в ${response.selectedTimeSlot.selectedTimeRange}\n\n`;
-                }
-                
-                // Add activities
-                if (response.activities && response.activities.length > 0) {
-                    response.activities.forEach((activity, index) => {
-                        formattedResponse += `${index + 1}. **${activity.title}**\n`;
-                        
-                        if (activity.description) {
-                            formattedResponse += `   ${activity.description}\n`;
-                        }
-                        
-                        // Add details
-                        const details = [];
-                        if (activity.date) details.push(`Дата: ${activity.date}`);
-                        if (activity.time) details.push(`Время: ${activity.time}`);
-                        if (activity.location) details.push(`Где: ${activity.location}`);
-                        if (activity.price) details.push(`Цена: ${activity.price}`);
-                        if (activity.ageRestriction) details.push(`Возраст: ${activity.ageRestriction}`);
-                        
-                        if (details.length > 0) {
-                            formattedResponse += `   _${details.join(' | ')}_\n`;
-                        }
-                        
-                        if (activity.url) {
-                            formattedResponse += `   🔗 [Подробнее](${activity.url})\n`;
-                        }
-                        
-                        formattedResponse += '\n';
-                    });
-                } else {
-                    formattedResponse += 'К сожалению, я не смог найти подходящие мероприятия по вашему запросу. Попробуйте изменить параметры поиска или предпочтения.';
-                }
-                
-                return formattedResponse;
+            } catch (error) {
+                responseDiv.classList.remove('loading');
+                responseDiv.classList.add('error');
+                responseDiv.textContent = `Произошла ошибка: ${error.message}`;
+            } finally {
+                // Re-enable input and button
+                queryInput.disabled = false;
+                submitButton.disabled = false;
             }
-            
-            // Handle send button click
-            sendButton.addEventListener('click', sendMessage);
-            
-            // Handle enter key press in input field
-            messageInput.addEventListener('keypress', event => {
-                if (event.key === 'Enter') {
-                    sendMessage();
-                }
-            });
-            
-            // Focus input field on page load
-            messageInput.focus();
+        });
+
+        // Allow submitting with Enter key
+        queryInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                submitButton.click();
+            }
         });
     </script>
 </body>

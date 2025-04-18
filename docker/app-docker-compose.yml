@@ -1,6 +1,7 @@
 services:
   chroma-db:
     image: ghcr.io/chroma-core/chroma:0.5.20
+    platform: linux/arm64
     container_name: chroma-db
     ports:
       - "8000:8000"

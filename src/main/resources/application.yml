@@ -1,13 +1,41 @@
 spring:
+  application:
+    name: family
+  http:
+    client:
+      factory: simple
   ai:
     ollama:
       base-url: http://localhost:11434
-      model: llama3
+      model: herenickname/t-tech_T-lite-it-1.0:q4_k_m
+      init:
+        pull-model-strategy: never
+        embedding:
+          include: false
+      embedding:
+        enabled: false
+    vectorstore:
+      chroma:
+        enabled: false
+        client:
+          host: http://localhost
+          port: 8000
+        initialize-schema: true
+        collection-name: FamilyCollection
+    auto-vectorization:
+      enabled: false
+    ignore-vectorstore-check: true
+    retry-template-configuration:
+      max-attempts: 3
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.autoconfigure.vectorstore.chroma.ChromaVectorStoreAutoConfiguration
 
 server:
   port: 8080
 
 logging:
   level:
-    org.springframework.ai: INFO
-    rut.uvp.family: DEBUG 
+    org.springframework.ai: DEBUG
+    org.springframework.web.client: DEBUG
+    rut.uvp.family: DEBUG

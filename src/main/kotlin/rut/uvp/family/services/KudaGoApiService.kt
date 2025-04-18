@@ -1,6 +1,7 @@
 package rut.uvp.family.services
 
 import org.springframework.cache.annotation.Cacheable
+import org.springframework.cache.annotation.CacheEvict
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
@@ -11,11 +12,8 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import org.slf4j.LoggerFactory
-import org.springframework.cache.annotation.CacheEvict
-import org.springframework.cache.annotation.CachePut
 import org.springframework.scheduling.annotation.Scheduled
 import java.time.format.DateTimeFormatter
-import java.util.concurrent.TimeUnit
 
 /**
  * Сервис для работы с API KudaGo
@@ -38,50 +36,45 @@ class KudaGoApiService(
         private const val EVENTS_CACHE = "kudago-events"
         private const val EVENT_DETAILS_CACHE = "kudago-event-details"
     }
-    
+
     /**
      * Получение списка доступных городов
-     * 
-     * @return Список городов
      */
     @Cacheable(LOCATIONS_CACHE)
     fun getLocations(): List<KudaGoLocation> {
-        logger.info("Fetching locations from KudaGo API")
+        val url = "$API_BASE_URL$LOCATIONS_ENDPOINT"
+        logger.info("KudaGo API REQUEST: GET $url")
         
         return try {
-            val url = "$API_BASE_URL$LOCATIONS_ENDPOINT"
             val response = restTemplate.getForObject(url, KudaGoLocationResponse::class.java)
+            logger.debug("KudaGo API response received: ${response?.results?.size ?: 0} locations")
             response?.results ?: emptyList()
         } catch (e: Exception) {
             logger.error("Error fetching locations: ${e.message}")
             emptyList()
         }
     }
-    
+
     /**
      * Получение списка категорий мероприятий
-     * 
-     * @return Список категорий
      */
     @Cacheable(CATEGORIES_CACHE)
     fun getCategories(): List<KudaGoCategory> {
-        logger.info("Fetching categories from KudaGo API")
+        val url = "$API_BASE_URL$CATEGORIES_ENDPOINT"
+        logger.info("KudaGo API REQUEST: GET $url")
         
         return try {
-            val url = "$API_BASE_URL$CATEGORIES_ENDPOINT"
             val response = restTemplate.getForObject(url, KudaGoCategoryResponse::class.java)
+            logger.debug("KudaGo API response received: ${response?.results?.size ?: 0} categories")
             response?.results ?: emptyList()
         } catch (e: Exception) {
             logger.error("Error fetching categories: ${e.message}")
             emptyList()
         }
     }
-    
+
     /**
      * Поиск мероприятий по параметрам
-     * 
-     * @param params Параметры поиска
-     * @return Список мероприятий
      */
     @Cacheable(value = [EVENTS_CACHE], key = "#params.toString()")
     fun searchEvents(params: KudaGoSearchParams): List<KudaGoEvent> {
@@ -90,7 +83,6 @@ class KudaGoApiService(
         return try {
             val urlBuilder = UriComponentsBuilder.fromHttpUrl("$API_BASE_URL$EVENTS_ENDPOINT")
             
-            // Добавляем параметры запроса
             params.location?.let { urlBuilder.queryParam("location", it) }
             if (params.categories.isNotEmpty()) {
                 urlBuilder.queryParam("categories", params.categories.joinToString(","))
@@ -104,27 +96,29 @@ class KudaGoApiService(
             urlBuilder.queryParam("page", params.page)
             
             val url = urlBuilder.build().toUriString()
+            logger.info("KudaGo API REQUEST: GET $url")
+            
             val response = restTemplate.getForObject(url, KudaGoEventResponse::class.java)
+            logger.debug("KudaGo API response received: ${response?.results?.size ?: 0} events")
             response?.results ?: emptyList()
         } catch (e: Exception) {
             logger.error("Error searching events: ${e.message}")
             emptyList()
         }
     }
-    
+
     /**
      * Получение детальной информации о мероприятии
-     * 
-     * @param eventId ID мероприятия
-     * @return Детальная информация о мероприятии или null в случае ошибки
      */
     @Cacheable(value = [EVENT_DETAILS_CACHE], key = "#eventId")
     fun getEventDetails(eventId: Int): KudaGoEvent? {
-        logger.info("Fetching event details for ID: $eventId")
+        val url = "$API_BASE_URL$EVENTS_ENDPOINT/$eventId"
+        logger.info("KudaGo API REQUEST: GET $url")
         
         return try {
-            val url = "$API_BASE_URL$EVENTS_ENDPOINT/$eventId"
-            restTemplate.getForObject(url, KudaGoEvent::class.java)
+            val response = restTemplate.getForObject(url, KudaGoEvent::class.java)
+            logger.debug("KudaGo API response received for event ID: $eventId")
+            response
         } catch (e: HttpClientErrorException) {
             if (e.statusCode == HttpStatus.NOT_FOUND) {
                 logger.warn("Event with ID $eventId not found")
@@ -137,45 +131,15 @@ class KudaGoApiService(
             null
         }
     }
-    
-    /**
-     * Конвертация моделей KudaGo в наши модели рекомендаций
-     * 
-     * @param events Список мероприятий KudaGo
-     * @return Список рекомендаций в формате нашего приложения
-     */
-    fun convertToRecommendations(events: List<KudaGoEvent>): List<ActivityRecommendation> {
-        return events.map { event ->
-            // Форматируем дату и время
-            val dateTimeInfo = formatDateTimeInfo(event.dates)
-            
-            ActivityRecommendation(
-                title = event.title,
-                description = event.shortDescription ?: event.description,
-                imageUrl = event.images.firstOrNull()?.image,
-                date = dateTimeInfo.first,
-                time = dateTimeInfo.second,
-                location = formatLocation(event.place),
-                price = event.price,
-                ageRestriction = event.ageRestriction,
-                category = event.categories.firstOrNull()?.name,
-                url = "https://kudago.com/msk/event/${event.slug}/"
-            )
-        }
-    }
-    
+
     /**
      * Форматирование информации о дате и времени
-     * 
-     * @param dates Список дат проведения
-     * @return Пара (дата, время)
      */
     private fun formatDateTimeInfo(dates: List<KudaGoDateRange>): Pair<String?, String?> {
         if (dates.isEmpty()) return Pair(null, null)
         
         val dateRange = dates.first()
         
-        // Форматирование даты
         val formattedDate = if (dateRange.startDate != null) {
             val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
             val startDate = LocalDate.parse(dateRange.startDate)
@@ -200,7 +164,6 @@ class KudaGoApiService(
             }
         }
         
-        // Форматирование времени
         val formattedTime = if (dateRange.startTime != null) {
             if (dateRange.endTime != null && dateRange.endTime != dateRange.startTime) {
                 "${dateRange.startTime.substring(0, 5)} - ${dateRange.endTime.substring(0, 5)}"
@@ -213,12 +176,9 @@ class KudaGoApiService(
         
         return Pair(formattedDate, formattedTime)
     }
-    
+
     /**
      * Форматирование информации о месте проведения
-     * 
-     * @param place Место проведения
-     * @return Отформатированная строка с местом проведения
      */
     private fun formatLocation(place: KudaGoPlace?): String? {
         if (place == null) return null
@@ -229,7 +189,7 @@ class KudaGoApiService(
             place.title ?: place.address
         }
     }
-    
+
     /**
      * Очистка всех кэшей (по расписанию каждый день в 4 утра)
      */
@@ -238,4 +198,68 @@ class KudaGoApiService(
     fun clearCaches() {
         logger.info("Clearing all KudaGo API caches")
     }
-} 
+
+    /**
+     * Поиск мероприятий по параметрам
+     */
+    fun searchEvents(
+        keywords: String,
+        city: String = "msk",
+        isFree: Boolean? = null,
+        categories: String? = null,
+        dateFrom: String? = null
+    ): List<Activity> {
+        logger.info("Search request: keywords='$keywords', city='$city', isFree=$isFree, categories='$categories', dateFrom='$dateFrom'")
+        
+        val params = KudaGoSearchParams(
+            location = city,
+            categories = categories?.split(",")?.map { it.trim() } ?: emptyList(),
+            actualSince = dateFrom?.let { java.time.Instant.parse(it + "T00:00:00Z") },
+            isFree = isFree,
+            query = keywords
+        )
+        
+        val events = searchEvents(params)
+        logger.info("Found ${events.size} events from KudaGo API for '$keywords'")
+        
+        return events.map { event ->
+            val dateTimeInfo = formatDateTimeInfo(event.dates)
+            
+            Activity(
+                id = event.id.toString(),
+                title = event.title,
+                description = event.shortDescription ?: event.description ?: "",
+                date = dateTimeInfo.first,
+                time = dateTimeInfo.second,
+                location = formatLocation(event.place),
+                price = event.price,
+                ageRestriction = event.ageRestriction,
+                category = event.categories.firstOrNull()?.name,
+                link = "https://kudago.com/msk/event/${event.slug}/",
+                imageUrl = event.images.firstOrNull()?.image
+            )
+        }
+    }
+
+    /**
+     * Конвертирует KudaGoEvent в модель ActivityRecommendation для передачи клиенту
+     */
+    fun convertToRecommendations(events: List<KudaGoEvent>): List<ActivityRecommendation> {
+        return events.map { event ->
+            val dateTimeInfo = formatDateTimeInfo(event.dates)
+            
+            ActivityRecommendation(
+                title = event.title,
+                description = event.shortDescription ?: event.description,
+                imageUrl = event.images.firstOrNull()?.image,
+                date = dateTimeInfo.first,
+                time = dateTimeInfo.second,
+                location = formatLocation(event.place),
+                price = event.price,
+                ageRestriction = event.ageRestriction,
+                category = event.categories.firstOrNull()?.name,
+                url = "https://kudago.com/msk/event/${event.slug}/"
+            )
+        }
+    }
+}

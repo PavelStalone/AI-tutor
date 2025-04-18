@@ -1,136 +1,140 @@
 package rut.uvp.family.services
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.ai.chat.prompt.SystemPromptTemplate
-import org.springframework.ai.document.Document
-import org.springframework.ai.vectorstore.SearchRequest
-import org.springframework.ai.vectorstore.VectorStore
+import org.springframework.ai.chat.messages.SystemMessage
+import org.springframework.ai.chat.messages.UserMessage
+import org.springframework.ai.chat.prompt.Prompt
 import org.springframework.stereotype.Service
 import rut.uvp.family.models.ActivityRequestData
 import rut.uvp.family.models.SelectedTimeSlot
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
+import java.time.LocalDate
 
+/**
+ * Сервис для работы с датами и временными слотами
+ */
 @Service
 class DateSelectionService(
     private val chatClient: ChatClient,
-    private val vectorStore: VectorStore,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
+    private val timeSlotService: TimeSlotService
 ) {
     companion object {
         private const val DATE_SELECTION_PROMPT = """
-            Ты - планировщик семейного досуга. Тебе нужно выбрать оптимальное время для проведения семейного мероприятия, 
-            основываясь на доступных временных слотах членов семьи и информации о запросе.
+            Ты - помощник по выбору даты для семейных мероприятий.
+            
+            На основе запроса пользователя и его предпочтений определи наиболее подходящую дату для мероприятия.
             
             Информация о запросе:
-            {{request}}
+            {{requestInfo}}
             
-            Доступные временные слоты:
-            {{availableSlots}}
+            Если в запросе указаны конкретные даты, используй их. Если указан день недели (например, "суббота"), 
+            определи ближайшую дату, соответствующую этому дню недели.
             
-            Проанализируй доступные временные слоты и выбери оптимальное время для мероприятия.
-            Учитывай возраст члена семьи при выборе (например, для детей младшего возраста не стоит выбирать поздние вечерние часы).
+            Если используются слова "сегодня", "завтра", "послезавтра", "на этой неделе", "на следующей неделе" - 
+            преобразуй их в конкретную дату.
             
-            Верни результат ТОЛЬКО в следующем JSON формате:
-            {
-              "selectedDate": "YYYY-MM-DD",
-              "selectedTimeRange": "HH:MM-HH:MM"
-            }
+            Верни результат в виде даты в формате ISO (YYYY-MM-DD).
+            Верни только дату без пояснений.
         """
     }
     
     /**
-     * Gets available time slots for a family member from the RAG store
-     *
-     * @param familyRole The role of the family member (e.g., "daughter", "son")
-     * @return A list of available time slots
+     * Выбор оптимального временного слота для мероприятия
      */
-    fun getAvailableTimeSlots(familyRole: String?): List<String> {
-        if (familyRole == null) return emptyList()
-        
-        // Create a query to find available slots for the specified family member
-        val query = "доступное время для $familyRole"
-        
-        // Search the vector store for relevant documents
-        val results = vectorStore.similaritySearch(
-            SearchRequest.builder()
-                .query(query)
-                .topK(5)
-                .build()
-        )
-        
-        // If no results found, create some dummy data for demonstration
-        if (results.isNullOrEmpty()) {
-            // In a real application, you would handle this differently
-            return generateDummyTimeSlots()
+    fun selectTimeSlot(activityRequest: ActivityRequestData): SelectedTimeSlot? {
+        val date = determineDate(activityRequest)
+        if (date != null) {
+            return timeSlotService.generateTimeSlotsForDate(date).firstOrNull()
+        }
+        return null
+    }
+    
+    /**
+     * Определение даты из запроса пользователя
+     */
+    private fun determineDate(activityRequest: ActivityRequestData): LocalDate? {
+        // Если указана конкретная дата в preferredDate, используем её
+        activityRequest.preferredDate?.let {
+            return try {
+                LocalDate.parse(it)
+            } catch (e: Exception) {
+                null
+            }
         }
         
-        // Extract available time slots from the results
-        return results.mapNotNull { it.text }
-    }
-    
-    /**
-     * Generates dummy time slots for demonstration purposes
-     * In a real application, this would be replaced with actual data
-     */
-    private fun generateDummyTimeSlots(): List<String> {
-        return listOf(
-            "2023-09-30 10:00-13:00",
-            "2023-09-30 15:00-18:00", 
-            "2023-10-01 11:00-14:00",
-            "2023-10-01 16:00-19:00"
-        )
-    }
-    
-    /**
-     * Adds available time slots for a family member to the RAG store
-     *
-     * @param familyRole The role of the family member
-     * @param timeSlots List of time slots in "YYYY-MM-DD HH:MM-HH:MM" format
-     */
-    fun addAvailableTimeSlots(familyRole: String, timeSlots: List<String>) {
-        val documentText = "Доступное время для $familyRole: ${timeSlots.joinToString(", ")}"
-        val document = Document.builder()
-            .text(documentText)
-            .metadata(mapOf("type" to "timeSlots", "familyRole" to familyRole))
-            .build()
+        // Если указана конкретная дата в date, используем её
+        activityRequest.date?.let {
+            return try {
+                LocalDate.parse(it)
+            } catch (e: Exception) {
+                null
+            }
+        }
         
-        vectorStore.add(listOf(document))
-    }
-    
-    /**
-     * Selects an optimal time slot based on the activity request
-     *
-     * @param request The activity request data
-     * @return The selected time slot or null if no suitable slot is found
-     */
-    fun selectTimeSlot(request: ActivityRequestData): SelectedTimeSlot? {
-        val familyRole = request.familyMember?.role ?: return null
+        // Если указан день недели, определяем ближайшую подходящую дату
+        if (activityRequest.dayOfWeek != null) {
+            return determineNextDateByDayOfWeek(activityRequest.dayOfWeek)
+        }
         
-        // Get available time slots
-        val availableSlots = getAvailableTimeSlots(familyRole)
-        if (availableSlots.isEmpty()) return null
-        
-        // Use LLM to select the optimal time slot
-        val promptTemplate = SystemPromptTemplate.builder()
-            .template(DATE_SELECTION_PROMPT)
-            .parameter("request", objectMapper.writeValueAsString(request))
-            .parameter("availableSlots", availableSlots.joinToString("\n"))
-            .build()
-            .create()
-        
-        val response = chatClient
-            .prompt()
-            .system(promptTemplate)
-            .call()
-            .content()
+        // Если нет явных указаний на дату, используем ИИ для определения даты на основе контекста
+        val requestInfo = buildRequestInfoString(activityRequest)
+        val systemPromptText = DATE_SELECTION_PROMPT.replace("{{requestInfo}}", requestInfo)
         
         return try {
-            objectMapper.readValue<SelectedTimeSlot>(response)
+            val dateString = chatClient.prompt()
+                .system(systemPromptText)
+                .user("Определи дату для мероприятия")
+                .call()
+                .content()
+                ?.trim()
+                ?: return LocalDate.now()
+
+            LocalDate.parse(dateString)
         } catch (e: Exception) {
-            println("Error parsing time slot selection: $e")
-            println("Response content: $response")
-            null
+            // Если не удалось определить дату, используем сегодня
+            LocalDate.now()
         }
     }
-} 
+    
+    /**
+     * Определение ближайшей даты по дню недели
+     */
+    private fun determineNextDateByDayOfWeek(dayOfWeekStr: String): LocalDate {
+        val today = LocalDate.now()
+        // Отображение русских названий дней недели на числовые значения (1-понедельник, 7-воскресенье)
+        val dayOfWeekMap = mapOf(
+            "понедельник" to 1, "вторник" to 2, "среда" to 3, "четверг" to 4,
+            "пятница" to 5, "суббота" to 6, "воскресенье" to 7
+        )
+        
+        val targetDayOfWeek = dayOfWeekMap[dayOfWeekStr.lowercase()] ?: today.dayOfWeek.value
+        var daysToAdd = (targetDayOfWeek - today.dayOfWeek.value)
+        if (daysToAdd <= 0) daysToAdd += 7 // Если день уже прошел, берем следующую неделю
+        
+        return today.plusDays(daysToAdd.toLong())
+    }
+    
+    /**
+     * Формирует строку с информацией о запросе для промпта
+     */
+    private fun buildRequestInfoString(activityRequest: ActivityRequestData): String {
+        val sb = StringBuilder()
+        
+        activityRequest.dayOfWeek?.let { sb.append("День недели: $it\n") }
+        
+        activityRequest.familyMember?.let { member ->
+            val role = member.role ?: "член семьи"
+            val age = member.age?.let { " (возраст: $it лет)" } ?: ""
+            sb.append("Для кого: $role$age\n")
+        }
+        
+        activityRequest.activityType?.let { sb.append("Тип активности: $it\n") }
+        
+        if (activityRequest.preferences.isNotEmpty()) {
+            sb.append("Предпочтения: ${activityRequest.preferences.joinToString(", ")}\n")
+        }
+        
+        return sb.toString()
+    }
+}

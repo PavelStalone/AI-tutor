@@ -2,13 +2,7 @@ services:
   ollama-llm:
     image: ollama/ollama:latest
     container_name: ollama-llm
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              capabilities: [ "gpu" ]
-              count: all
+    platform: linux/arm64
     volumes:
       - ./ollama:/data
     ports:
@@ -18,6 +12,7 @@ services:
 
   prepare-models:
     image: ollama/ollama:latest
+    platform: linux/arm64
     depends_on:
       - ollama-llm
     volumes:

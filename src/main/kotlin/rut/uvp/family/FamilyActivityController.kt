@@ -5,87 +5,140 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import reactor.core.publisher.Flux
-import reactor.core.publisher.Mono
 import rut.uvp.family.models.ActivityRequestData
+import rut.uvp.family.models.ActivityRecommendation
 import rut.uvp.family.models.FamilyActivityResponse
-import rut.uvp.family.services.ConversationFlowService
-import rut.uvp.family.services.DateSelectionService
-import rut.uvp.family.services.ParserService
+import rut.uvp.family.services.EnhancedConversationFlowService
+import rut.uvp.family.services.TimeSlotService
 import rut.uvp.family.services.SearchQueryService
+import rut.uvp.family.services.KudaGoApiService
 import com.fasterxml.jackson.databind.ObjectMapper
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import org.slf4j.LoggerFactory
+import java.time.LocalDate
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.springframework.web.bind.annotation.GetMapping
 
-/**
- * Controller for handling family activity recommendation requests
- */
 @RestController
 @RequestMapping("family-activity")
 class FamilyActivityController(
-    private val conversationFlowService: ConversationFlowService,
-    private val dateSelectionService: DateSelectionService,
+    private val conversationFlowService: EnhancedConversationFlowService,
+    private val timeSlotService: TimeSlotService,
     private val searchQueryService: SearchQueryService,
-    private val parserService: ParserService,
+    private val kudaGoApiService: KudaGoApiService,
     private val objectMapper: ObjectMapper
 ) {
-    /**
-     * Process a user query for family activity recommendations
-     * 
-     * @param request The user message request
-     * @return A stream of response messages or the final JSON result
-     */
+    private val logger = LoggerFactory.getLogger(FamilyActivityController::class.java)
+
     @PostMapping(produces = [MediaType.APPLICATION_JSON_VALUE])
-    fun processActivityRequest(@RequestBody request: MessageRequest): FamilyActivityResponse {
-        // Step 1: Extract information from the user message
-        val activityRequest = conversationFlowService.extractActivityRequest(request.message)
-        
-        // Step 2: Check if more information is needed
-        val (needsMoreInfo, missingFields) = conversationFlowService.needsMoreInformation(activityRequest)
-        if (needsMoreInfo) {
-            // In a real application, we would return a message asking for more information
-            // For simplicity, we'll continue with whatever information we have
-            println("Missing information: $missingFields")
+    suspend fun processActivityRequest(@RequestBody request: MessageRequest): FamilyActivityResponse = withContext(Dispatchers.IO) {
+        try {
+            logger.debug("Processing activity request: {}", request.message)
+            
+            // Извлекаем данные о запросе активности
+            val activityRequest = conversationFlowService.extractActivityRequest(request.message)
+                ?: return@withContext FamilyActivityResponse(
+                    request = ActivityRequestData(),
+                    error = "Не удалось распознать запрос"
+                )
+
+            // Проверяем, нужна ли дополнительная информация
+            val (needsMoreInfo, missingFields) = conversationFlowService.needsMoreInformation(activityRequest)
+            if (needsMoreInfo) {
+                logger.debug("Missing information: {}", missingFields)
+                val followUpQuestion = conversationFlowService.generateFollowUpQuestion(missingFields, activityRequest.familyMember?.role)
+                return@withContext FamilyActivityResponse(
+                    request = activityRequest,
+                    followUpQuestion = followUpQuestion
+                )
+            }
+
+            // Выбор временного слота, если необходимо
+            val selectedTimeSlot = if (activityRequest.needsTimeSlotSelection && activityRequest.preferredDate != null) {
+                timeSlotService.generateTimeSlotsForDate(LocalDate.parse(activityRequest.preferredDate)).firstOrNull()
+            } else {
+                null
+            }
+
+            // Генерируем поисковый запрос
+            val searchQuery = searchQueryService.generateSearchQuery(activityRequest, selectedTimeSlot)
+                ?: return@withContext FamilyActivityResponse(
+                    request = activityRequest,
+                    error = "Не удалось сформировать поисковый запрос"
+                )
+
+            logger.debug("Generated search query: {}", searchQuery)
+
+            // Ищем мероприятия через KudaGo API
+            val activities = kudaGoApiService.searchEvents(
+                keywords = searchQuery.searchQuery,
+                city = searchQuery.filters["город"] ?: "msk",
+                isFree = searchQuery.filters["бесплатно"]?.toBoolean(),
+                categories = searchQuery.filters["категория"],
+                dateFrom = searchQuery.filters["дата"] ?: activityRequest.preferredDate
+            )
+
+            if (activities.isEmpty()) {
+                return@withContext FamilyActivityResponse(
+                    request = activityRequest,
+                    error = "Не найдено подходящих мероприятий"
+                )
+            }
+
+            // Конвертируем в рекомендации
+            val recommendations = activities.map { activity ->
+                ActivityRecommendation(
+                    title = activity.title,
+                    description = activity.description,
+                    imageUrl = activity.imageUrl,
+                    date = activity.date,
+                    time = activity.time,
+                    location = activity.location,
+                    price = activity.price,
+                    ageRestriction = activity.ageRestriction,
+                    category = activity.category,
+                    url = activity.link
+                )
+            }
+
+            FamilyActivityResponse(
+                request = activityRequest,
+                selectedTimeSlot = selectedTimeSlot,
+                activities = recommendations
+            )
+        } catch (e: Exception) {
+            logger.error("Error processing activity request", e)
+            FamilyActivityResponse(
+                request = ActivityRequestData(),
+                error = "Произошла ошибка при обработке запроса: ${e.message}"
+            )
         }
-        
-        // Step 3: Auto-select time slot if needed
-        val selectedTimeSlot = if (activityRequest.needsTimeSlotSelection) {
-            dateSelectionService.selectTimeSlot(activityRequest)
-        } else {
-            null
-        }
-        
-        // Step 4: Generate search query
-        val searchQuery = searchQueryService.generateSearchQuery(activityRequest, selectedTimeSlot)
-            ?: return FamilyActivityResponse(activityRequest) // Return empty response if query generation failed
-        
-        // Step 5: Search for activities
-        val activities = parserService.searchActivities(searchQuery)
-        
-        // Step 6: Return the results as a structured response
-        return FamilyActivityResponse(
-            request = activityRequest,
-            selectedTimeSlot = selectedTimeSlot,
-            activities = activities
-        )
     }
-    
-    /**
-     * Process a user query for family activity recommendations with streamed responses
-     * This endpoint provides a more interactive experience by streaming responses
-     *
-     * @param request The user message request
-     * @return A stream of response messages
-     */
+
     @PostMapping(path = ["/stream"], produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
-    fun processActivityRequestStream(@RequestBody request: MessageRequest): Flux<String> {
-        return Mono.fromCallable { processActivityRequest(request) }
-            .map { response -> objectMapper.writeValueAsString(response) }
-            .flux()
+    suspend fun processActivityRequestStream(@RequestBody request: MessageRequest): Flow<String> = flow {
+        try {
+            val response = processActivityRequest(request)
+            emit(objectMapper.writeValueAsString(response))
+        } catch (e: Exception) {
+            logger.error("Error in stream processing", e)
+            emit(objectMapper.writeValueAsString(
+                FamilyActivityResponse(
+                    request = ActivityRequestData(),
+                    error = "Ошибка потоковой обработки: ${e.message}"
+                )
+            ))
+        }
     }
-    
-    /**
-     * Data class for representing a message request
-     */
+
+    @GetMapping
+    fun getHomePage() : String {
+        return "index.html"
+    }
+
     data class MessageRequest(
         val message: String
     )
-} 
+}

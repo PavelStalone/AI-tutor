@@ -15,75 +15,68 @@ import java.time.format.DateTimeFormatter
 import java.time.LocalDate
 import java.time.Period
 
-/**
- * Класс для инициализации RAG системы данными о семье
- */
 @Configuration
 class FamilyRagInitializer(
     private val objectMapper: ObjectMapper
 ) {
-    
+
     private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-    
-    /**
-     * Инициализирует векторное хранилище данными о семье
-     */
+
     @Bean
-    @Order(2) // Выполняется после очистки хранилища
+    @Order(2)
     fun initFamilyRag(
         vectorStore: VectorStore,
         familyService: FamilyService
     ) = CommandLineRunner { _ ->
         println("Initializing RAG with family data...")
         
-        // Получаем всех членов семьи
         val members = familyService.getAllFamilyMembers()
+        println("Found ${members.size} family members")
         
-        // Создаем документы о каждом члене семьи
+        if (members.isEmpty()) {
+            println("No family members found. Cannot initialize RAG store.")
+            return@CommandLineRunner
+        }
+        
         val memberDocuments = members.flatMap { member ->
             createMemberDocuments(member)
         }
         
-        // Получаем все события календаря
         val events = familyService.getAllCalendarEvents()
+        println("Found ${events.size} calendar events")
         
-        // Создаем документы о событиях календаря
         val eventDocuments = events.flatMap { event ->
-            // Находим участника события
             val member = familyService.getFamilyMember(event.familyMemberId)
             createEventDocuments(event, member)
         }
         
-        // Объединяем документы
         val allDocuments = memberDocuments + eventDocuments
         
-        // Создаем токенизатор для разбиения документов
-        val textSplitter = TokenTextSplitter(
-            maxTokenCount = 500,
-            minTokenCount = 200,
-            overlapTokenCount = 20,
-            maxSegmentSize = 5000,
-            keepSeparators = false
-        )
+        if (allDocuments.isEmpty()) {
+            println("No documents were created. Cannot initialize RAG store.")
+            return@CommandLineRunner
+        }
+
+        val textSplitter = TokenTextSplitter()
         
-        // Разбиваем документы на сегменты
         val splitDocuments = textSplitter.split(allDocuments)
         
-        // Добавляем документы в векторное хранилище
+        if (splitDocuments.isEmpty()) {
+            println("Text splitter produced no documents. Cannot initialize RAG store.")
+            return@CommandLineRunner
+        }
+        
+        println("Adding ${splitDocuments.size} documents to RAG store")
         val addedCount = vectorStore.add(splitDocuments)
         
         println("Added $addedCount documents to RAG store")
         println("RAG initialization completed!")
     }
     
-    /**
-     * Создает документы с информацией о члене семьи
-     */
     private fun createMemberDocuments(member: FamilyMember): List<Document> {
         val documents = mutableListOf<Document>()
         
-        // Основная информация о члене семьи
         val age = Period.between(member.birthDate, LocalDate.now()).years
         val baseInfo = """
             Информация о члене семьи:
@@ -110,7 +103,6 @@ class FamilyRagInitializer(
             .build()
         documents.add(baseDocument)
         
-        // Предпочтения и ограничения
         if (member.preferences.isNotEmpty() || member.restrictions.isNotEmpty()) {
             val preferencesInfo = """
                 Предпочтения и ограничения ${member.name}:
@@ -134,7 +126,6 @@ class FamilyRagInitializer(
             documents.add(preferencesDocument)
         }
         
-        // Особенности по возрасту
         val ageSpecificInfo = when (age) {
             in 0..2 -> "Для младенцев и детей до 2 лет подходят простые игрушки, яркие картинки, музыкальные занятия и короткие прогулки."
             in 3..6 -> "Дети 3-6 лет любят творчество, простые игры, мультфильмы, посещение детских площадок и интерактивные занятия."
@@ -162,14 +153,10 @@ class FamilyRagInitializer(
         
         return documents
     }
-    
-    /**
-     * Создает документы с информацией о событиях календаря
-     */
+
     private fun createEventDocuments(event: CalendarEvent, member: FamilyMember?): List<Document> {
         val documents = mutableListOf<Document>()
         
-        // Базовая информация о событии
         val memberName = member?.name ?: "Неизвестный участник"
         val eventInfo = """
             Событие в календаре ${memberName}:
@@ -199,7 +186,6 @@ class FamilyRagInitializer(
             .build()
         documents.add(eventDocument)
         
-        // Если событие повторяющееся, добавляем информацию о доступности
         if (event.isRecurring) {
             val availabilityInfo = when {
                 event.title.contains("Работа", ignoreCase = true) -> 
@@ -235,10 +221,7 @@ class FamilyRagInitializer(
         
         return documents
     }
-    
-    /**
-     * Форматирует пол в текстовом виде
-     */
+
     private fun formatGender(gender: rut.uvp.family.models.Gender): String {
         return when (gender) {
             rut.uvp.family.models.Gender.MALE -> "Мужской"
@@ -246,10 +229,7 @@ class FamilyRagInitializer(
             rut.uvp.family.models.Gender.OTHER -> "Другой"
         }
     }
-    
-    /**
-     * Форматирует отношение к владельцу аккаунта в текстовом виде
-     */
+
     private fun formatRelation(relation: rut.uvp.family.models.RelationToOwner?): String {
         return when (relation) {
             rut.uvp.family.models.RelationToOwner.SPOUSE -> "Супруг(а)"
@@ -265,10 +245,7 @@ class FamilyRagInitializer(
             null -> "Не указано"
         }
     }
-    
-    /**
-     * Форматирует правило повторения в человекочитаемом виде
-     */
+
     private fun formatRecurrenceRule(rule: String?): String {
         if (rule == null) return "Нет правила повторения"
         

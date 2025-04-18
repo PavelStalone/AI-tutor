@@ -1,6 +1,6 @@
 package rut.uvp.family.models
 
-// Request model to capture family activity request information
+// Основная модель для запроса активности
 data class ActivityRequestData(
     val familyMember: FamilyMemberData? = null,
     val date: String? = null,
@@ -12,23 +12,22 @@ data class ActivityRequestData(
     val preferredDate: String? = null,
     val budgetConstraint: String? = null,
     val locationPreference: String? = null,
-    val activityDuration: String? = null,
     val specialRequirements: List<String> = emptyList()
 )
 
-// Family member information
+// Информация о члене семьи
 data class FamilyMemberData(
-    val role: String? = null, // e.g., daughter, son, wife, etc.
+    val role: String? = null, // например, "дочь", "сын", "жена" и т.д.
     val age: Int? = null
 )
 
-// Selected date and time slot
+// Временной слот
 data class SelectedTimeSlot(
     val selectedDate: String,
     val selectedTimeRange: String
 )
 
-// Search query for activities
+// Поисковый запрос
 data class ActivitySearchQuery(
     val searchQuery: String,
     val filters: Map<String, String> = emptyMap()
@@ -52,5 +51,7 @@ data class ActivityRecommendation(
 data class FamilyActivityResponse(
     val request: ActivityRequestData,
     val selectedTimeSlot: SelectedTimeSlot? = null,
-    val activities: List<ActivityRecommendation> = emptyList()
+    val activities: List<ActivityRecommendation> = emptyList(),
+    val error: String? = null,
+    val followUpQuestion: String? = null
 ) 

@@ -3,6 +3,7 @@ package rut.uvp.family
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor
 import org.springframework.ai.chat.client.advisor.QuestionAnswerAdvisor
+import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor
 import org.springframework.ai.chat.memory.InMemoryChatMemory
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.embedding.EmbeddingModel
@@ -78,7 +79,7 @@ class OllamaConfig {
     @Bean
     fun chatClient(
         chatModel: ChatModel,
-        vectorStore: VectorStore,
+        vectorStore: VectorStore?,
         embeddingModel: EmbeddingModel,
     ): ChatClient {
         val chatMemory = InMemoryChatMemory()
@@ -132,8 +133,7 @@ class OllamaConfig {
             """.trimIndent())
             .defaultAdvisors(
 //                MessageChatMemoryAdvisor(chatMemory, "Test", 10),
-                QuestionAnswerAdvisor(vectorStore, SearchRequest.builder().topK(10).build()),
-                LoggerAdvisor(),
+                SimpleLoggerAdvisor(),
             )
             .build()
     }

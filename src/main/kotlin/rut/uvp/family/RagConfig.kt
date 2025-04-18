@@ -21,24 +21,8 @@ class RagConfig {
     @Bean
     @Order(1)
     fun clearVectorStore(vectorStore: VectorStore) = CommandLineRunner { _ ->
-        println("Start clear")
-        vectorStore.similaritySearch(
-            SearchRequest.builder()
-                .query("All")
-                .similarityThreshold(0.0)
-                .topK(Int.MAX_VALUE)
-                .build()
-        )
-            ?.map {
-                println("Clear: $it")
-                it.id
-            }
-            ?.run {
-                if (isNotEmpty()) {
-                    vectorStore.delete(this)
-                }
-            }
-        println("Finished")
+        // Отключено из-за проблем с ChromaDB
+        println("VectorStore clearing disabled")
     }
 
 //    @Bean
