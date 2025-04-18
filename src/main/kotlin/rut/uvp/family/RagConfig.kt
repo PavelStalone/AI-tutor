@@ -122,19 +122,19 @@ class LoggerAdvisor() : CallAroundAdvisor, StreamAroundAdvisor {
     }
 
     override fun aroundStream(advisedRequest: AdvisedRequest, chain: StreamAroundAdvisorChain): Flux<AdvisedResponse> {
-        println("BEFORE: $advisedRequest")
+        println("BEFORE Stream: $advisedRequest")
 
         val advisedResponse = chain.nextAroundStream(advisedRequest)
 
-        return MessageAggregator().aggregateAdvisedResponse(advisedResponse) { println("AFTER: $it") }
+        return MessageAggregator().aggregateAdvisedResponse(advisedResponse) { println("AFTER Stream: $it") }
     }
 
     override fun aroundCall(advisedRequest: AdvisedRequest, chain: CallAroundAdvisorChain): AdvisedResponse {
-        println("BEFORE: $advisedRequest")
+        println("BEFORE Call: $advisedRequest")
 
         val advisedResponse = chain.nextAroundCall(advisedRequest)
 
-        println("AFTER: $advisedResponse")
+        println("AFTER Call: $advisedResponse")
 
         return advisedResponse
     }

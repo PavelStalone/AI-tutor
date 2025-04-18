@@ -41,3 +41,6 @@ out/
 
 ### UserStore ###
 store/
+
+/docker/*
+!/docker/*compose*
