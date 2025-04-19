@@ -24,8 +24,8 @@ class MockDataController(
         // 2. Создаём семью
         val family = familyService.createFamily(user1.id)
         // 3. Добавляем членов семьи
-        familyMemberService.addMember(user1.id, family.id, "мама", interests = "музей,кино")
-        familyMemberService.addMember(user2.id, family.id, "папа", interests = "спорт,кино")
+        familyMemberService.addMember(user1.id, family.id, "жена", interests = "музей,кино")
+        familyMemberService.addMember(user2.id, family.id, "Создатель семьи", interests = "спорт,кино")
         familyMemberService.addMember(user3.id, family.id, "сын", interests = "детские,спорт")
         // 4. Добавляем события календаря
         val now = LocalDateTime.now()

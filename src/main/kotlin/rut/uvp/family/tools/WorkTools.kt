@@ -63,7 +63,7 @@ class WorkTools(
         }.also { println("Return result: $it") }
     }
 
-    @Tool(description = "Парсинг запроса пользователя для семейного досуга")
+    @Tool(description = "Парсинг запроса пользователя для досуга. Дата должна быть в формате UNIX timestamp (целое число)")
     fun parseLeisureRequest(@ToolParam(description = "Текст запроса") message: String): String {
         val req = conversationFlowService.parseUserMessage(message)
         return objectMapper.writeValueAsString(req)

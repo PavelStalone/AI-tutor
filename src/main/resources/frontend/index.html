@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Tutor Family Chat</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
+        .chat-container { max-width: 500px; margin: 40px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 24px; }
+        .messages { min-height: 200px; margin-bottom: 16px; }
+        .message { margin-bottom: 12px; }
+        .user { color: #1976d2; font-weight: bold; }
+        .bot { color: #388e3c; }
+        .input-row { display: flex; gap: 8px; }
+        input[type=text] { flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
+        button { padding: 8px 16px; border: none; border-radius: 4px; background: #1976d2; color: #fff; cursor: pointer; }
+        button:disabled { background: #aaa; }
+    </style>
+</head>
+<body>
+<div class="chat-container">
+    <div class="messages" id="messages"></div>
+    <form id="chatForm" class="input-row">
+        <input type="text" id="userInput" placeholder="Введите запрос..." autocomplete="off" required />
+        <button type="submit">Отправить</button>
+    </form>
+</div>
+<script>
+const messagesDiv = document.getElementById('messages');
+const chatForm = document.getElementById('chatForm');
+const userInput = document.getElementById('userInput');
+
+function appendMessage(text, sender) {
+    const div = document.createElement('div');
+    div.className = 'message ' + sender;
+    div.innerHTML = `<span class="${sender}">${sender === 'user' ? 'Вы' : 'Бот'}:</span> ${text}`;
+    messagesDiv.appendChild(div);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+chatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = userInput.value.trim();
+    if (!text) return;
+    appendMessage(text, 'user');
+    userInput.value = '';
+    appendMessage('...', 'bot');
+    try {
+        const res = await fetch('/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text })
+        });
+        const data = await res.json();
+        messagesDiv.lastChild.remove(); // remove '...'
+        appendMessage(
+            typeof data === 'string' ? data : JSON.stringify(data, null, 2),
+            'bot'
+        );
+    } catch (err) {
+        messagesDiv.lastChild.remove();
+        appendMessage('Ошибка при получении ответа', 'bot');
+    }
+});
+</script>
+</body>
+</html> 

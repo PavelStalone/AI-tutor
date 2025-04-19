@@ -37,19 +37,21 @@ class ConversationFlowService(
         6. После основного JSON, с новой строки, сгенерируй JSON с параметрами для запроса к KudaGo API по следующей схеме:
         {
           \"location\": \"msk\", // если город Москва, то msk; если Санкт-Петербург — spb; и т.д. (см. документацию KudaGo)
-          \"actual_since\": \"1713484800\", // UNIX timestamp для даты (или текущей даты, если auto)
+          \"actual_since\": \"1713484800\", // UNIX timestamp (целое число, например, 1713484800)
           \"lang\": \"ru\",
           \"fields\": \"title,description,dates,images\",
           \"expand\": \"images,dates\",
           \"page\": \"1\",
           \"page_size\": \"4\"
         }
+        Ни в коем случае не передавай \"location\": \"Москва\"
+        ТОЛЬКО \"location\": \"msk\" или другой город в том же формате
         Пример:
         Вход: \"Что поделать с дочкой 6 лет в эти выходные в Москве?\"
         Выход:
         {
           \"members\": [{\"role\": \"дочка\", \"age\": 6}],
-          \"date\": \"auto\",
+          \"date\": \"1713484800\",
           \"preferences\": [],
           \"restrictions\": [],
           \"city\": \"Москва\"

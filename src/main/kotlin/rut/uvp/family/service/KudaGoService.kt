@@ -19,7 +19,7 @@ class KudaGoService(
             var finalUrl = ""
             val defaultParams = mapOf(
                 "fields" to "title,description,dates,images",
-                "expand" to "images,dates",
+//                "expand" to "images,dates",
                 "lang" to "ru",
                 "page" to "1",
                 "page_size" to "4"
