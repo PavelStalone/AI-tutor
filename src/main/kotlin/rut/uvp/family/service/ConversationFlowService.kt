@@ -39,10 +39,10 @@ class ConversationFlowService(
           \"location\": \"msk\", // если город Москва, то msk; если Санкт-Петербург — spb; и т.д. (см. документацию KudaGo)
           \"actual_since\": \"1713484800\", // UNIX timestamp для даты (или текущей даты, если auto)
           \"lang\": \"ru\",
-          \"fields\": \"id,title,dates,place,description,images\",
-          \"expand\": \"images,place,dates\",
+          \"fields\": \"title,description,dates,images\",
+          \"expand\": \"images,dates\",
           \"page\": \"1\",
-          \"page_size\": \"10\"
+          \"page_size\": \"4\"
         }
         Пример:
         Вход: \"Что поделать с дочкой 6 лет в эти выходные в Москве?\"
@@ -58,10 +58,10 @@ class ConversationFlowService(
           \"location\": \"msk\",
           \"actual_since\": \"1713484800\",
           \"lang\": \"ru\",
-          \"fields\": \"id,title,dates,place,description,images\",
-          \"expand\": \"images,place,dates\",
+          \"fields\": \"title,description,dates,images\",
+          \"expand\": \"images,dates\",
           \"page\": \"1\",
-          \"page_size\": \"10\"
+          \"page_size\": \"4\"
         }
         Пользователь: $message
         """

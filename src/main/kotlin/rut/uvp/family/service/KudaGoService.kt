@@ -18,11 +18,11 @@ class KudaGoService(
         return try {
             var finalUrl = ""
             val defaultParams = mapOf(
-                "fields" to "id,title,dates,place,description,images",
-                "expand" to "images,place,dates",
+                "fields" to "title,description,dates,images",
+                "expand" to "images,dates",
                 "lang" to "ru",
                 "page" to "1",
-                "page_size" to "10"
+                "page_size" to "4"
             )
             val mergedParams = defaultParams + params.filterKeys { it !in defaultParams.keys }
             val response = webClient.get()

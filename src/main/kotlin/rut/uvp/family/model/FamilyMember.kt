@@ -12,5 +12,7 @@ data class FamilyMember(
     @Column(nullable = false)
     val familyId: Long = 0,
     @Column(nullable = false)
-    val relation: String = ""
+    val relation: String = "",
+    @Column(nullable = true)
+    val interests: String? = null
 )

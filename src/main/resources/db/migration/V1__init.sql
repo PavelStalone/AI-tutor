@@ -15,7 +15,8 @@ CREATE TABLE family_members (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
     family_id BIGINT NOT NULL,
-    relation VARCHAR(255) NOT NULL
+    relation VARCHAR(255) NOT NULL,
+    interests TEXT
 );
 
 CREATE TABLE calendar_events (

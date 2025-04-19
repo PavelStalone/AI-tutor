@@ -18,8 +18,10 @@ class SearchQueryService {
             "концерт" to "concert",
             "парк" to "park"
         )
-        val categories = request.preferences?.mapNotNull { categoryMap[it.lowercase()] }?.joinToString(",")
-        if (!categories.isNullOrBlank()) params["categories"] = categories
+        // Собираем интересы всех членов семьи
+        val allInterests = (request.members?.flatMap { it.interests ?: emptyList() } ?: emptyList()) + (request.preferences ?: emptyList())
+        val categories = allInterests.mapNotNull { categoryMap[it.lowercase()] }.distinct().joinToString(",")
+        if (categories.isNotBlank()) params["categories"] = categories
         // Можно добавить фильтрацию по возрасту, если нужно
         return params
     }
