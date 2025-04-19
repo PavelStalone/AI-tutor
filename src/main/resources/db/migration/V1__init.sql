@@ -1,0 +1,29 @@
+CREATE TABLE users (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE families (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    family_code VARCHAR(255) NOT NULL UNIQUE,
+    creator_id BIGINT NOT NULL
+);
+
+CREATE TABLE family_members (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    family_id BIGINT NOT NULL,
+    relation VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE calendar_events (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    family_id BIGINT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    start TIMESTAMP NOT NULL,
+    end_time TIMESTAMP NOT NULL,
+    source VARCHAR(255) NOT NULL
+); 

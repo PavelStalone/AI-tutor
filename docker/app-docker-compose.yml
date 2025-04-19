@@ -1,6 +1,21 @@
+version: '3.8'
 services:
   chroma-db:
     image: ghcr.io/chroma-core/chroma:0.5.20
     container_name: chroma-db
+    platform: linux/arm64
     ports:
       - "8000:8000"
+  postgres:
+    image: postgres:15-alpine
+    container_name: family-postgres
+    environment:
+      POSTGRES_DB: familydb
+      POSTGRES_USER: family
+      POSTGRES_PASSWORD: family
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:
