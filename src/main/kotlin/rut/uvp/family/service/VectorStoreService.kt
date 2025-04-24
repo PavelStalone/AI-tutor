@@ -40,7 +40,7 @@ class VectorStoreService(
             ?: emptyList()
     }
 
-    @Scheduled(fixedRate = 60 * 60 * 1000) // Every 1 hour
+    @Scheduled(fixedRate = 60 * 60 * 1000) // Every 1 hour | Check analog "HandFier"
     private fun removeOldData() {
         Log.d("Start clear old data")
 
