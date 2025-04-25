@@ -1,7 +1,6 @@
-package rut.uvp.family
+package rut.uvp.family.controller
 
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.ai.chat.client.advisor.QuestionAnswerAdvisor
 import org.springframework.ai.embedding.EmbeddingModel
 import org.springframework.ai.transformer.splitter.TokenTextSplitter
 import org.springframework.ai.vectorstore.SearchRequest
@@ -12,6 +11,9 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
+import rut.uvp.family.UserStoreImpl
+import rut.uvp.family.WorkTools
+import rut.uvp.family.rag.UniversalAdvisor
 
 @RestController
 @RequestMapping("chat")
@@ -41,12 +43,26 @@ class ChatController(
 
         return chatClient
             .prompt(messageRequest.message)
-//            .apply {
-//                resumeStore.getResume("test_resume")?.let { vectorStore ->
-//                    println("Added advisor")
-//                    advisors(QuestionAnswerAdvisor(vectorStore, SearchRequest.builder().topK(10).build()))
-//                }
-//            }
+            .apply {
+                resumeStore.getResume("test_resume")?.let { vectorStore ->
+                    advisors(
+                        UniversalAdvisor.create(
+                            order = 0,
+                            vectorStore = vectorStore,
+                            searchRequest = SearchRequest.builder().topK(10).build(),
+                            contextAnswerProperty = "stek_answer_context",
+                            retrievedDocumentsProperty = "stek_retrieved_documents",
+                            advisorPrompt = { answer ->
+                                """
+                                    ----- ДАННЫЕ ИЗ РЕЗЮМЕ -----
+                                    $answer
+                                    ---------------------------
+                                """.trimIndent()
+                            }
+                        )
+                    )
+                }
+            }
             .tools(testTools)
             .stream()
             .content()

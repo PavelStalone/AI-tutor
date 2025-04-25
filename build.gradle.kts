@@ -24,7 +24,6 @@ extra["springAiVersion"] = "1.0.0-M6"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-//    implementation("org.springframework.ai:spring-ai-qdrant-store")
     implementation("org.springframework.ai:spring-ai-qdrant-store")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")

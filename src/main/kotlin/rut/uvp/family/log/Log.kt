@@ -2,10 +2,6 @@ package rut.uvp.family.log
 
 object Log {
 
-    fun e(throwable: Throwable, message: String) {
-        println("[ERROR] $throwable $message")
-    }
-
     fun i(message: String) {
         println("[INFO] $message")
     }
@@ -16,5 +12,9 @@ object Log {
 
     fun v(message: String) {
         println("[TRACE] $message")
+    }
+
+    fun e(throwable: Throwable, message: String) {
+        println("[ERROR] $throwable $message")
     }
 }
