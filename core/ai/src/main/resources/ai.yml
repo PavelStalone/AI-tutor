@@ -1,0 +1,15 @@
+spring:
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      embedding:
+        enabled: false
+      init:
+        embedding:
+          include: false
+        pull-model-strategy: never
+      model: herenickname/t-tech_T-lite-it-1.0:q4_k_m
+    vectorstore:
+      qdrant:
+        host: localhost
+        port: 6334
