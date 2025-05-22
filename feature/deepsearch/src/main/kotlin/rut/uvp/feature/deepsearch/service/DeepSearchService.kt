@@ -1,4 +1,4 @@
-package rut.uvp.deepsearch.service
+package rut.uvp.feature.deepsearch.service
 
 import kotlinx.coroutines.*
 import org.jsoup.Jsoup
@@ -8,25 +8,25 @@ import org.springframework.core.ParameterizedTypeReference
 import org.springframework.stereotype.Service
 import rut.uvp.core.ai.config.ChatClientQualifier
 import rut.uvp.core.common.log.Log
-import rut.uvp.deepsearch.domain.model.Activity
 import rut.uvp.deepsearch.domain.repository.SearchRepository
-import rut.uvp.deepsearch.infrastructure.model.ActivityResponse
+import rut.uvp.feature.deepsearch.domain.model.Vacancy
+import rut.uvp.feature.deepsearch.infrastructure.model.VacancyResponse
 import java.net.URLDecoder
 import kotlin.time.Duration.Companion.seconds
 
 interface DeepSearchService {
 
-    suspend fun deepSearch(query: String): List<Activity>
+    suspend fun deepSearch(query: String): List<Vacancy>
 }
 
 @Service
 internal class DeepSearchServiceImpl(
-    @Qualifier(ChatClientQualifier.ACTIVITY_FINDER_CLIENT)
+    @Qualifier(ChatClientQualifier.VACANCY_FINDER_CLIENT)
     private val chatClient: ChatClient,
     private val searchRepository: SearchRepository,
 ) : DeepSearchService {
 
-    override suspend fun deepSearch(query: String): List<Activity> = withContext(Dispatchers.IO) {
+    override suspend fun deepSearch(query: String): List<Vacancy> = withContext(Dispatchers.IO) {
         val clearQuery = query.trim().trimEnd('.').removeSurrounding("\"")
         Log.i("DeepSearch started for query: $clearQuery")
 
@@ -62,14 +62,16 @@ internal class DeepSearchServiceImpl(
                             chatClient
                                 .prompt(page)
                                 .call()
-                                .entity(object : ParameterizedTypeReference<List<ActivityResponse>>() {})
+                                .entity(object : ParameterizedTypeReference<List<VacancyResponse>>() {})
                                 ?.map { response ->
-                                    Activity(
-                                        title = response.title,
-                                        description = response.description,
-                                        dateRange = response.dateRange,
+                                    Vacancy(
+                                        jobTitle = response.jobTitle,
+                                        jobDescription = response.jobDescription,
+                                        candidateRequirements = response.candidateRequirements,
+                                        workingConditions = response.workingConditions,
                                         location = response.location,
-                                        url = link
+                                        contactInfo = response.contactInfo,
+                                        url = link,
                                     )
                                 }
                         }.getOrNull()

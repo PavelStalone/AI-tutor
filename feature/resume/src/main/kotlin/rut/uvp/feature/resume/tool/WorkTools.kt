@@ -11,7 +11,8 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Component
 import rut.uvp.core.ai.config.ChatClientQualifier
 import rut.uvp.core.common.log.Log
-import rut.uvp.deepsearch.service.DeepSearchService
+import rut.uvp.feature.deepsearch.domain.model.Vacancy
+import rut.uvp.feature.deepsearch.service.DeepSearchService
 import rut.uvp.feature.resume.service.VacancyStoreService
 import kotlin.time.Duration.Companion.days
 
@@ -23,13 +24,16 @@ class WorkTools(
     private val vacancyStoreService: VacancyStoreService,
 ) {
 
-    @Tool(description = "Функция для получения новых вакансий")
-    fun fetchCompany(@ToolParam(description = "Стек пользователя") stack: String): String = runCatching {
-        println("fetchCompany called: $stack")
+    @Tool(description = "Получение новых вакансий")
+    fun fetchCompany(
+        @ToolParam(description = "Комплексный профиль навыков и предпочтений пользователя, включающий ключевые технологии, инструменты, уровень опыта, тип занятости, предпочтения по локации, зарплате и другие важные параметры")
+        profile: String
+    ): String = runCatching {
+        println("fetchCompany called: $profile")
 
         val query =
             chatClient
-                .prompt("Сделай ссылку для поиска вакансий для пользователя со стеком: $stack")
+                .prompt(profile)
                 .call()
                 .content()
         requireNotNull(query)
@@ -40,20 +44,33 @@ class WorkTools(
 
         Log.v("Result: $result")
 
-        result.forEach { info ->
-            vacancyStoreService.addWithTTL(text = info.toString(), instant = Clock.System.now().plus(2.days))
-        }
+        val vacancyFromStore = runCatching {
+            result.forEach { info ->
+                vacancyStoreService.addWithTTL(text = info.toString(), instant = Clock.System.now().plus(2.days))
+            }
 
-        return vacancyStoreService
-            .search(
-                SearchRequest.builder()
-                    .query(stack)
-                    .topK(20)
-                    .similarityThreshold(0.4)
-                    .build()
-            )
-            .map(Document::getText)
+            vacancyStoreService
+                .search(
+                    SearchRequest.builder()
+                        .query(profile)
+                        .topK(20)
+                        .similarityThreshold(0.4)
+                        .build()
+                )
+                .map(Document::getText)
+        }.onFailure { throwable ->
+            Log.e(throwable, "Failed update vectorStore")
+        }.getOrNull()
+
+        return (vacancyFromStore ?: result.map(Vacancy::toString))
             .joinToString(System.lineSeparator())
             .also { println("Return result: $it") }
+            .let {info ->
+                """
+                    Данные об вакансиях: $info
+                    Используй только их для ответа. В ответе к каждой вакансии прикрепляй ссылку (url).
+                    Предложи минимум 5 вакансий
+                """.trimIndent()
+            }
     }.getOrDefault("")
 }
